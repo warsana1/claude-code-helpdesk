@@ -6,7 +6,20 @@
       "Bash(bun install *)",
       "Bash(bun dev:server)",
       "Bash(bun dev:client)",
-      "Bash(bunx prisma *)"
+      "Bash(bunx prisma *)",
+      "Bash(bun dev *)",
+      "Bash(Get-ChildItem -Recurse -Directory)",
+      "Bash(Select-Object FullName)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\inyom\\\\Desktop\\\\playground\\\\HelpDesk\" -Force)",
+      "Bash(Select-Object Name, FullName)",
+      "Bash(Get-ChildItem *)",
+      "Bash(bunx @better-auth/cli@latest generate --config src/auth.ts --output prisma/schema.prisma)",
+      "Bash(Remove-Item *)",
+      "Bash(PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=\"yes i want\" bunx prisma migrate reset --force)",
+      "Bash(curl -s http://localhost:3001/api/health)",
+      "Bash(curl -s -X POST http://localhost:3001/api/auth/sign-up/email -H 'Content-Type: application/json' -d '{\"email\":\"test@example.com\",\"password\":\"password1234\",\"name\":\"Test User\"}' -c /tmp/cookies.txt)",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl *)"
     ]
   }
 }
