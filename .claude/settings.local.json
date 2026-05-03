@@ -5,7 +5,8 @@
       "mcp__context7__query-docs",
       "Bash(bun install *)",
       "Bash(bun dev:server)",
-      "Bash(bun dev:client)"
+      "Bash(bun dev:client)",
+      "Bash(bunx prisma *)"
     ]
   }
 }
