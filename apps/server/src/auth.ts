@@ -10,6 +10,16 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+    disableSignUp: true,
+  },
+  user: {
+    additionalFields: {
+      role: {
+        type: "string",
+        defaultValue: "agent",
+        input: false,
+      },
+    },
   },
   trustedOrigins: ["http://localhost:5173"],
 });

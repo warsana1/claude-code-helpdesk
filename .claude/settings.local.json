@@ -19,7 +19,12 @@
       "Bash(curl -s http://localhost:3001/api/health)",
       "Bash(curl -s -X POST http://localhost:3001/api/auth/sign-up/email -H 'Content-Type: application/json' -d '{\"email\":\"test@example.com\",\"password\":\"password1234\",\"name\":\"Test User\"}' -c /tmp/cookies.txt)",
       "Bash(python3 -m json.tool)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(pkill -f \"bun run --hot src/index.ts\")",
+      "Bash(pkill -f \"bun.*index.ts\")",
+      "PowerShell(Get-Process *)",
+      "Bash(bun run *)",
+      "PowerShell(cd \"C:\\\\Users\\\\inyom\\\\Desktop\\\\playground\\\\HelpDesk\\\\apps\\\\server\"; $env:PRISMA_FORCE_INTERACTIVE = \"true\"; bunx prisma migrate dev --name role_enum 2>&1)"
     ]
   }
 }
