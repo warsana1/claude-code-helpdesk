@@ -15,6 +15,15 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+app.get("/api/me", async (req, res) => {
+  const session = await auth.api.getSession({ headers: req.headers as any });
+  if (!session) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  res.json(session.user);
+});
+
 app.use("/api/tickets", ticketsRouter);
 
 app.listen(PORT, () => {
