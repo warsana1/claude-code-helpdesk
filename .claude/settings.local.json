@@ -24,7 +24,12 @@
       "Bash(pkill -f \"bun.*index.ts\")",
       "PowerShell(Get-Process *)",
       "Bash(bun run *)",
-      "PowerShell(cd \"C:\\\\Users\\\\inyom\\\\Desktop\\\\playground\\\\HelpDesk\\\\apps\\\\server\"; $env:PRISMA_FORCE_INTERACTIVE = \"true\"; bunx prisma migrate dev --name role_enum 2>&1)"
+      "PowerShell(cd \"C:\\\\Users\\\\inyom\\\\Desktop\\\\playground\\\\HelpDesk\\\\apps\\\\server\"; $env:PRISMA_FORCE_INTERACTIVE = \"true\"; bunx prisma migrate dev --name role_enum 2>&1)",
+      "Bash(ConvertTo-Csv -NoTypeInformation)",
+      "Bash(Format-Table)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "PowerShell(head *)",
+      "Bash(bun x *)"
     ]
   }
 }
