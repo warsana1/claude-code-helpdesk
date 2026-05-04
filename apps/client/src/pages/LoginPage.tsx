@@ -23,7 +23,7 @@ export function LoginPage() {
   const onSubmit = async (data: LoginFields) => {
     const { error } = await authClient.signIn.email(data);
     if (error) {
-      setError("root", { message: error.message ?? "Sign in failed" });
+      setError("root", { message: "Invalid email or password." });
       return;
     }
     navigate("/");

@@ -12,6 +12,10 @@ export const auth = betterAuth({
     enabled: true,
     disableSignUp: true,
   },
+  session: {
+    expiresIn: 60 * 60 * 8,
+    updateAge: 60 * 60,
+  },
   user: {
     additionalFields: {
       role: {
@@ -21,5 +25,5 @@ export const auth = betterAuth({
       },
     },
   },
-  trustedOrigins: ["http://localhost:5173"],
+  trustedOrigins: [process.env.CLIENT_ORIGIN ?? "http://localhost:5173"],
 });

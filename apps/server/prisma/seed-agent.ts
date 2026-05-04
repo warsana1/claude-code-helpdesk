@@ -1,19 +1,14 @@
 import "dotenv/config";
-import { PrismaClient, Role } from "../src/generated/prisma";
+import { PrismaClient } from "../src/generated/prisma";
 
 const prisma = new PrismaClient();
 
-const email = process.env.SEED_ADMIN_EMAIL!;
-const password = process.env.SEED_ADMIN_PASSWORD!;
-
-if (!email || !password) {
-  console.error("SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD must be set");
-  process.exit(1);
-}
+const email = "agent@example.com";
+const password = "password123";
 
 const existing = await prisma.user.findUnique({ where: { email } });
 if (existing) {
-  console.log(`Admin user already exists: ${email}`);
+  console.log(`Agent user already exists: ${email}`);
   await prisma.$disconnect();
   process.exit(0);
 }
@@ -24,10 +19,9 @@ const hash = await Bun.password.hash(password, { algorithm: "argon2id" });
 await prisma.user.create({
   data: {
     id,
-    name: "Admin",
+    name: "Agent",
     email,
     emailVerified: true,
-    role: Role.admin,
     accounts: {
       create: {
         id: crypto.randomUUID(),
@@ -39,5 +33,5 @@ await prisma.user.create({
   },
 });
 
-console.log(`Created admin user: ${email}`);
+console.log(`Created agent user: ${email}`);
 await prisma.$disconnect();
