@@ -85,6 +85,43 @@ Database-backed sessions stored in the `Session` Prisma model. The client reads 
 
 Defined as a Prisma enum: `admin` | `agent` (default). Stored on the `User` model as an additional Better Auth field.
 
+### Typing additionalFields on the client
+
+`session.user.role` requires the `inferAdditionalFields` plugin to be typed correctly on the client:
+
+```ts
+// apps/client/src/lib/auth-client.ts
+import { inferAdditionalFields } from "better-auth/client/plugins";
+
+export const authClient = createAuthClient({
+  baseURL: "http://localhost:3001",
+  plugins: [
+    inferAdditionalFields({
+      user: { role: { type: "string" } },
+    }),
+  ],
+});
+```
+
+Add a matching entry here whenever a new `additionalField` is added to the server auth config.
+
+### Role-based routing
+
+Admin-only routes follow this pattern in `App.tsx`:
+
+```tsx
+<Route
+  path="/users"
+  element={
+    !session ? <Navigate to="/login" replace /> :
+    session.user.role === "admin" ? <UsersPage /> :
+    <Navigate to="/" replace />
+  }
+/>
+```
+
+Admin-only nav links: `{session?.user.role === "admin" && <Link to="/users">Users</Link>}`
+
 ### Environment variables (server)
 
 ```
@@ -97,8 +134,21 @@ SEED_ADMIN_PASSWORD=  # used by prisma/seed.ts
 
 ### Creating users
 
-Sign-up is disabled at runtime. To add a user, update `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` in `.env` and re-run the seed script:
+Sign-up is disabled at runtime. Use seed scripts to create accounts:
+
+| Script | Purpose |
+|---|---|
+| `apps/server/prisma/seed.ts` | Creates the admin user from `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` env vars |
+| `apps/server/prisma/seed-agent.ts` | Template for creating agent users — duplicate and adjust as needed |
 
 ```bash
-bun run apps/server/prisma/seed.ts
+bun run apps/server/prisma/seed.ts        # create/verify admin
+bun run apps/server/prisma/seed-agent.ts  # create agent@example.com
 ```
+
+### Seeded accounts
+
+| Email | Role |
+|---|---|
+| (value of `SEED_ADMIN_EMAIL`) | admin |
+| agent@example.com | agent |
