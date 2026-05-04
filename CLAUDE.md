@@ -38,6 +38,27 @@ bun test:e2e:headed   # Playwright headed mode
 - Tailwind v4: no config file — just `@import "tailwindcss"` in `index.css`
 - React Router v7: import from `react-router` (merged package, no `-dom` suffix)
 
+## Data Fetching (client)
+
+- Use **axios** for all HTTP requests — never raw `fetch`
+- Use **TanStack Query** (`@tanstack/react-query`) for all server state — no manual `useState`/`useEffect` for API calls
+- `QueryClientProvider` is set up in `apps/client/src/main.tsx`
+- Always pass `{ withCredentials: true }` to axios so session cookies are sent
+
+Pattern:
+
+```ts
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+
+async function fetchItems(): Promise<Item[]> {
+  const { data } = await axios.get<Item[]>("/api/items", { withCredentials: true });
+  return data;
+}
+
+const { data, isPending, isError } = useQuery({ queryKey: ["items"], queryFn: fetchItems });
+```
+
 ## Documentation
 
 Always use **Context7 MCP** to fetch up-to-date docs before writing code that involves any library or framework. Never rely solely on training data.

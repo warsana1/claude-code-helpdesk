@@ -1,27 +1,25 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 import { NavBar } from "../components/NavBar";
 
 type User = { id: string; name: string; email: string; role: string; createdAt: string };
 
-export function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+async function fetchUsers(): Promise<User[]> {
+  const { data } = await axios.get<User[]>("/api/users", { withCredentials: true });
+  return data;
+}
 
-  useEffect(() => {
-    fetch("/api/users", { credentials: "include" })
-      .then((r) => r.json())
-      .then((data) => { setUsers(data); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, []);
+export function UsersPage() {
+  const { data: users, isPending, isError } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
 
   return (
     <div className="min-h-screen bg-gray-50">
       <NavBar />
       <div className="max-w-5xl mx-auto px-4 py-10">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Users</h1>
-        {loading ? (
-          <p className="text-sm text-gray-500">Loading...</p>
-        ) : (
+        {isPending && <p className="text-sm text-gray-500">Loading...</p>}
+        {isError && <p className="text-sm text-red-500">Failed to load users.</p>}
+        {users && (
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
