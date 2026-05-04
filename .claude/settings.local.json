@@ -31,7 +31,13 @@
       "PowerShell(head *)",
       "Bash(bun x *)",
       "Bash(Select-Object -Property FullName, Name)",
-      "Bash(Format-Table -AutoSize)"
+      "Bash(Format-Table -AutoSize)",
+      "Bash(bun add *)",
+      "Bash(bunx --bun shadcn@latest init --yes)",
+      "Bash(bunx --bun shadcn@latest init --help)",
+      "Bash(bunx --bun shadcn@latest init -b radix -t vite -y)",
+      "Bash(bunx --bun shadcn@latest init -b radix -t vite -p nova -y)",
+      "Bash(xargs grep *)"
     ]
   }
 }

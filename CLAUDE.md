@@ -58,3 +58,47 @@ Always use **Context7 MCP** to fetch up-to-date docs before writing code that in
 | React Router | resolve at query time |
 | Tailwind CSS | resolve at query time |
 | Anthropic SDK | resolve at query time |
+| Better Auth | resolve at query time |
+
+## Authentication
+
+Library: **Better Auth** (v1.x) — email/password only. Sign-up is **disabled** in the main auth config; only the seed script can create accounts.
+
+### Key files
+
+| File | Purpose |
+|---|---|
+| `apps/server/src/auth.ts` | Better Auth server instance — Prisma adapter, trusted origin, user role field |
+| `apps/client/src/lib/auth-client.ts` | Better Auth React client — `signIn.email()`, `signOut()`, `useSession()` |
+
+### Server wiring (`apps/server/src/index.ts`)
+
+- `ALL /api/auth/*` → `toNodeHandler(auth)` (Better Auth handles all auth routes)
+- `GET /api/me` → returns current user via `auth.api.getSession()`
+- CORS configured for `http://localhost:5173` with credentials enabled
+
+### Session strategy
+
+Database-backed sessions stored in the `Session` Prisma model. The client reads the session on app load via `useSession()`; the app redirects to `/login` if no session is present.
+
+### User roles
+
+Defined as a Prisma enum: `admin` | `agent` (default). Stored on the `User` model as an additional Better Auth field.
+
+### Environment variables (server)
+
+```
+BETTER_AUTH_SECRET=   # secret key for signing sessions
+BETTER_AUTH_URL=http://localhost:3001
+DATABASE_URL=         # PostgreSQL connection string
+SEED_ADMIN_EMAIL=     # used by prisma/seed.ts to create the initial admin
+SEED_ADMIN_PASSWORD=  # used by prisma/seed.ts
+```
+
+### Creating users
+
+Sign-up is disabled at runtime. To add a user, update `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` in `.env` and re-run the seed script:
+
+```bash
+bun run apps/server/prisma/seed.ts
+```

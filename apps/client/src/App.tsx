@@ -42,14 +42,23 @@ function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <NavBar />
-      <div className="flex items-center justify-center min-h-[calc(100vh-65px)]">
+      <div
+        className="flex items-center justify-center"
+        style={{ minHeight: "calc(100vh - 65px)" }}
+      >
         <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-900">HelpDesk</h1>
           <p className="mt-2 text-gray-500">AI-powered ticket management</p>
           <p className="mt-4 text-sm">
-            {status === "loading" && <span className="text-gray-400">Checking server...</span>}
-            {status === "ok" && <span className="text-green-600">Server is online</span>}
-            {status === "error" && <span className="text-red-500">Server is unreachable</span>}
+            {status === "loading" && (
+              <span className="text-gray-400">Checking server...</span>
+            )}
+            {status === "ok" && (
+              <span className="text-green-600">Server is online</span>
+            )}
+            {status === "error" && (
+              <span className="text-red-500">Server is unreachable</span>
+            )}
           </p>
         </div>
       </div>
