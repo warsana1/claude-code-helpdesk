@@ -204,37 +204,16 @@ Three existing migrations:
 
 ## Testing (Playwright)
 
-E2E tests use a **separate `helpdesk_test` database** so the dev database is never touched.
+See [tests/CLAUDE.md](tests/CLAUDE.md) for full setup details.
 
-### Setup files
+To write E2E tests, use the **playwright-e2e-writer** agent:
 
-| File | Purpose |
-|---|---|
-| `playwright.config.ts` | Loads `apps/server/.env.test`, starts server + client webServers, global setup |
-| `playwright/global-setup.ts` | Runs `migrate deploy`, truncates all tables, seeds test users |
-| `apps/server/.env.test` | Test-only env vars (gitignored — copy from `.env.test.example`) |
-| `tests/` | Test files go here |
-
-### How it works
-
-1. `playwright.config.ts` loads `apps/server/.env.test` → `DATABASE_URL` points to `helpdesk_test`
-2. Global setup applies pending migrations, clears all rows (FK-safe order), re-seeds admin + agent
-3. Server webServer starts with test env vars overriding the dev `.env` (Bun respects pre-set env vars)
-4. Tests run against `http://localhost:5173`
-
-### Test database setup (first time / after recreating)
-
-```bash
-# Create the database (psql must be on PATH)
-psql -U postgres -c "CREATE DATABASE helpdesk_test"
-
-# Apply schema
-DATABASE_URL="postgresql://..." bunx --bun prisma migrate deploy
-
-# Seed
-DATABASE_URL="..." SEED_ADMIN_EMAIL=admin@example.com SEED_ADMIN_PASSWORD=password123 \
-  bun run apps/server/prisma/seed.ts
-  bun run apps/server/prisma/seed-agent.ts
+```
+@agent-playwright-e2e-writer <describe what to test>
 ```
 
-Stop your dev server before running `bun test:e2e` locally (`reuseExistingServer` is enabled).
+Examples:
+- `@agent-playwright-e2e-writer Write tests for the login flow`
+- `@agent-playwright-e2e-writer Add tests for admin-only access to /users`
+
+The agent has access to `tests/CLAUDE.md` for context on the test setup, accounts, routes, and isolation rules. Always invoke it rather than writing Playwright tests by hand.
