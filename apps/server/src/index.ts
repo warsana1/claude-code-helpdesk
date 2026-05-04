@@ -4,6 +4,7 @@ import rateLimit from "express-rate-limit";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth";
 import { ticketsRouter } from "./routes/tickets";
+import { usersRouter } from "./routes/users";
 import { requireAuth, requireAdmin } from "./middleware/auth";
 
 if (!process.env.BETTER_AUTH_SECRET) {
@@ -39,6 +40,7 @@ app.get("/api/me", requireAuth, (_req, res) => {
 });
 
 app.use("/api/tickets", requireAuth, ticketsRouter);
+app.use("/api/users", requireAuth, requireAdmin, usersRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
