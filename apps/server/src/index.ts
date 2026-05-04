@@ -17,15 +17,16 @@ const PORT = process.env.PORT ?? 3001;
 app.use(cors({ origin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173", credentials: true }));
 app.use(express.json());
 
-const signInLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 10,
-  message: { error: "Too many login attempts, please try again later." },
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
-});
-
-app.use("/api/auth/sign-in", signInLimiter);
+if (process.env.NODE_ENV === "production") {
+  const signInLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    message: { error: "Too many login attempts, please try again later." },
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+  });
+  app.use("/api/auth/sign-in", signInLimiter);
+}
 app.all("/api/auth/*", toNodeHandler(auth));
 
 app.get("/api/health", (_req, res) => {

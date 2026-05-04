@@ -14,7 +14,8 @@ if (existing) {
 }
 
 const id = crypto.randomUUID();
-const hash = await Bun.password.hash(password, { algorithm: "argon2id" });
+const { hashPassword } = await import("@better-auth/utils/password");
+const hash = await hashPassword(password);
 
 await prisma.user.create({
   data: {

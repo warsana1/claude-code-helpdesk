@@ -42,7 +42,15 @@
       "PowerShell(ls -Recurse \"C:\\\\Users\\\\inyom\\\\Desktop\\\\playground\\\\HelpDesk\\\\apps\\\\client\\\\src\" | ForEach-Object { $_.FullName -replace [regex]::Escape\\(\"C:\\\\Users\\\\inyom\\\\Desktop\\\\playground\\\\HelpDesk\"\\), \".\" })",
       "PowerShell(ls -Recurse \"C:\\\\Users\\\\inyom\\\\Desktop\\\\playground\\\\HelpDesk\\\\apps\\\\server\\\\src\" | ForEach-Object { $_.FullName -replace [regex]::Escape\\(\"C:\\\\Users\\\\inyom\\\\Desktop\\\\playground\\\\HelpDesk\\\\apps\\\\server\\\\src\"\\), \"\" })",
       "Bash(bun tsc *)",
-      "Bash(bun prisma/reset-admin-password.ts \"GaqwMPiRBVHbCcyZ!9\")"
+      "Bash(bun prisma/reset-admin-password.ts \"GaqwMPiRBVHbCcyZ!9\")",
+      "Bash(bun prisma/reset-admin-password.ts \"password123\")",
+      "Bash(bun pm *)",
+      "Bash(bunx playwright *)",
+      "PowerShell(psql *)",
+      "PowerShell($env:PGPASSWORD = \"postgresql190804\"; & \"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\psql.exe\" -U postgres -h localhost -c \"CREATE DATABASE helpdesk_test;\" 2>&1)",
+      "Bash(node -e ' *)",
+      "PowerShell($env:DATABASE_URL = \"postgresql://postgres:postgresql190804@localhost:5432/helpdesk_test\"; cd \"C:\\\\Users\\\\inyom\\\\Desktop\\\\playground\\\\HelpDesk\\\\apps\\\\server\"; bunx --bun prisma db push 2>&1)",
+      "PowerShell(bun *)"
     ]
   }
 }

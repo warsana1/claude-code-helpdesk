@@ -24,7 +24,8 @@ if (!account) {
   process.exit(1);
 }
 
-const hash = await Bun.password.hash(newPassword, { algorithm: "argon2id" });
+const { hashPassword } = await import("@better-auth/utils/password");
+const hash = await hashPassword(newPassword);
 
 await prisma.account.update({
   where: { id: account.id },

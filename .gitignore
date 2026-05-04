@@ -25,10 +25,16 @@ node_modules/.prisma
 .env
 .env.local
 .env.development.local
+.env.test
 .env.test.local
 .env.production.local
 .env.sample
 !.env.example
+!.env.test.example
+
+# Playwright
+playwright-report/
+test-results/
 
 # IDE - Visual Studio Code
 .vscode/*
