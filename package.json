@@ -1,7 +1,7 @@
 {
   "name": "helpdesk",
   "private": true,
-  "workspaces": ["apps/*"],
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "dev": "bun run --filter './apps/*' dev",
     "dev:server": "bun run --cwd apps/server dev",

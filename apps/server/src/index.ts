@@ -1,11 +1,12 @@
-import express from "express";
+import express, { type ErrorRequestHandler } from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth";
 import { ticketsRouter } from "./routes/tickets";
 import { usersRouter } from "./routes/users";
-import { requireAuth, requireAdmin } from "./middleware/auth";
+import { requireAuth } from "./middleware/auth";
+import { Prisma } from "./generated/prisma";
 
 if (!process.env.BETTER_AUTH_SECRET) {
   console.error("FATAL: BETTER_AUTH_SECRET is not set");
@@ -34,13 +35,16 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-app.get("/api/me", requireAuth, (_req, res) => {
-  const { user } = res.locals.session;
-  res.json({ id: user.id, name: user.name, email: user.email, role: user.role });
-});
-
 app.use("/api/tickets", requireAuth, ticketsRouter);
-app.use("/api/users", requireAuth, requireAdmin, usersRouter);
+app.use("/api/users", requireAuth, usersRouter);
+
+const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002")
+    return res.status(409).json({ error: "A user with that email already exists." });
+  console.error(err);
+  res.status(500).json({ error: "Internal server error." });
+};
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

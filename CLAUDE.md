@@ -13,8 +13,46 @@ HelpDesk/
 ├── apps/
 │   ├── server/   # Express + TypeScript backend (port 3001)
 │   └── client/   # React + Vite + Tailwind frontend (port 5173)
+├── packages/
+│   └── core/     # Shared schemas, types, and utilities
 ├── package.json  # Bun workspace root
 └── tsconfig.base.json
+```
+
+### `packages/core`
+
+Shared code used by both `server` and `client`. Add code here when it needs to be consumed from both apps.
+
+Currently contains:
+- `src/schemas/users.ts` — Zod schemas and inferred types for user operations
+
+Both apps reference it as `@helpdesk/core` via `"workspace:*"` in their `package.json`.
+
+**Defining a shared Zod schema:**
+
+```ts
+// packages/core/src/schemas/foo.ts
+import { z } from "zod";
+
+export const createFooSchema = z.object({ ... });
+export type CreateFooInput = z.infer<typeof createFooSchema>;
+```
+
+Re-export from `packages/core/src/index.ts`:
+```ts
+export * from "./schemas/foo";
+```
+
+**Using in server** (`@helpdesk/core` is already a dep):
+```ts
+import { createFooSchema } from "@helpdesk/core";
+const result = createFooSchema.safeParse(req.body);
+```
+
+**Using in client** (`@helpdesk/core` is already a dep):
+```ts
+import { createFooSchema, type CreateFooInput } from "@helpdesk/core";
+useForm<CreateFooInput>({ resolver: zodResolver(createFooSchema) });
 ```
 
 ## Dev Commands
@@ -38,6 +76,44 @@ bun test:e2e:headed   # Playwright headed mode
 - Tailwind v4: no config file — just `@import "tailwindcss"` in `index.css`
 - React Router v7: import from `react-router` (merged package, no `-dom` suffix)
 
+## Error Handling (server)
+
+Express 5 automatically forwards rejected async promises to the error handler — **do not use try/catch in route handlers**. Throw or let errors propagate naturally.
+
+A global `ErrorRequestHandler` in `apps/server/src/index.ts` (registered last, after all routes) handles all unhandled errors:
+- `Prisma.PrismaClientKnownRequestError` with code `"P2002"` → 409
+- Everything else → 500 + `console.error`
+
+When a new route needs a specific error mapped to a non-500 status, add a case to that handler rather than wrapping the route in try/catch.
+
+## API Validation (server)
+
+Use **Zod** for all request body validation in Express route handlers. Never write manual `if (!field)` checks.
+
+Pattern:
+
+```ts
+import { z } from "zod";
+
+const createFooSchema = z.object({
+  name: z.string().min(3, "Name must be at least 3 characters."),
+  email: z.string().email("Enter a valid email address."),
+});
+
+router.post("/", async (req, res) => {
+  const result = createFooSchema.safeParse(req.body);
+  if (!result.success)
+    return res.status(400).json({ error: result.error.issues[0].message });
+
+  const { name, email } = result.data;
+  // ...
+});
+```
+
+- Return the first issue message as `{ error: string }` with a `400` status
+- Define schemas at the top of the route file, named `<action><Resource>Schema`
+- `zod` is installed in `@helpdesk/server`
+
 ## Data Fetching (client)
 
 - Use **axios** for all HTTP requests — never raw `fetch`
@@ -58,6 +134,31 @@ async function fetchItems(): Promise<Item[]> {
 
 const { data, isPending, isError } = useQuery({ queryKey: ["items"], queryFn: fetchItems });
 ```
+
+## Forms (client)
+
+Use **React Hook Form** + **Zod** for all forms. Both are installed in `@helpdesk/client`.
+
+```ts
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const schema = z.object({
+  email: z.string().email("Enter a valid email address."),
+  password: z.string().min(8, "Password must be at least 8 characters."),
+});
+
+type FormValues = z.infer<typeof schema>;
+
+const { register, handleSubmit, setError, formState: { errors, isSubmitting } } =
+  useForm<FormValues>({ resolver: zodResolver(schema) });
+```
+
+- Use `mutateAsync` inside `handleSubmit` so `isSubmitting` tracks the full async lifecycle
+- Map server 409 responses to a field error via `setError("fieldName", { message })`
+- Map other server errors to `setError("root", { message })` and render `errors.root?.message`
+- Never use manual `useState` for field values or validation — let RHF + Zod handle it
 
 ## Documentation
 
@@ -98,7 +199,7 @@ Library: **Better Auth** (v1.x) — email/password only. Sign-up is **disabled**
 ### Server wiring (`apps/server/src/index.ts`)
 
 - `ALL /api/auth/*` → `toNodeHandler(auth)` (Better Auth handles all auth routes)
-- `GET /api/me` → `requireAuth` middleware + returns `{ id, name, email, role }` only
+- `GET /api/users/me` → `requireAuth` + returns `{ id, name, email, role }` only
 - CORS origin driven by `CLIENT_ORIGIN` env var (defaults to `http://localhost:5173`)
 - Rate limiting on `/api/auth/sign-in` — **production only** (`NODE_ENV=production`), 10 req / 15 min
 - Server exits on startup if `BETTER_AUTH_SECRET` is missing
@@ -108,7 +209,17 @@ Library: **Better Auth** (v1.x) — email/password only. Sign-up is **disabled**
 - `requireAuth` — reads session via Better Auth, stores in `res.locals.session`, returns 401 if missing
 - `requireAdmin` — checks `session.user.role === "admin"`, returns 403 if not; must come after `requireAuth`
 
-Apply to routes: `app.use("/api/route", requireAuth, router)` or `app.use("/api/admin/route", requireAuth, requireAdmin, router)`
+Mount routers with `requireAuth` only; apply `requireAdmin` at the individual route level inside the router for admin-only operations:
+
+```ts
+// index.ts
+app.use("/api/users", requireAuth, usersRouter);
+
+// routes/users.ts
+router.get("/me", (req, res) => { ... });           // any authenticated user
+router.get("/", requireAdmin, async (req, res) => { ... });  // admin only
+router.post("/", requireAdmin, async (req, res) => { ... }); // admin only
+```
 
 ### Session strategy
 
@@ -201,6 +312,19 @@ bun run apps/server/prisma/reset-admin-password.ts <password>   # reset admin pa
 |---|---|---|
 | (value of `SEED_ADMIN_EMAIL`) | (value of `SEED_ADMIN_PASSWORD`) | admin |
 | agent@example.com | password123 | agent |
+
+## Prisma Enums
+
+Always use the generated enum object instead of hardcoding strings:
+
+```ts
+import { Role } from "../generated/prisma";
+
+role: Role.agent   // not "agent"
+role: Role.admin   // not "admin"
+```
+
+Import from `../generated/prisma` (same package as `PrismaClient` and `Prisma`).
 
 ## Database & Migrations
 

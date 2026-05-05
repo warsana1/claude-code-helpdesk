@@ -1,6 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { NavBar } from "../components/NavBar";
+import { CreateUserModal } from "../components/CreateUserModal";
 
 type User = { id: string; name: string; email: string; role: string; createdAt: string };
 
@@ -11,12 +13,22 @@ async function fetchUsers(): Promise<User[]> {
 
 export function UsersPage() {
   const { data: users, isPending, isError } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
+  const [showModal, setShowModal] = useState(false);
+  const queryClient = useQueryClient();
 
   return (
     <div className="min-h-screen bg-gray-50">
       <NavBar />
       <div className="max-w-5xl mx-auto px-4 py-10">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Users</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Users</h1>
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-gray-900 hover:bg-gray-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            Create User
+          </button>
+        </div>
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
@@ -54,6 +66,12 @@ export function UsersPage() {
         </div>
         {isError && <p className="mt-4 text-sm text-red-500">Failed to load users.</p>}
       </div>
+      {showModal && (
+        <CreateUserModal
+          onClose={() => setShowModal(false)}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ["users"] })}
+        />
+      )}
     </div>
   );
 }
