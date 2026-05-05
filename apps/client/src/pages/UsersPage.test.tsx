@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import axios from "axios";
 import { UsersPage } from "./UsersPage";
 import { renderPage } from "../test/render-utils";
 
 vi.mock("axios");
 vi.mock("../components/NavBar", () => ({ NavBar: () => <nav data-testid="navbar" /> }));
+vi.mock("../components/UserForm", () => ({ UserForm: () => <div data-testid="user-form" /> }));
 
 const USERS = [
   { id: "1", name: "Alice Admin", email: "alice@example.com", role: "admin", createdAt: "2024-01-15T00:00:00.000Z" },
@@ -108,5 +110,41 @@ describe("UsersPage — error", () => {
       expect(screen.getByText("Failed to load users.")).toBeInTheDocument()
     );
     expect(screen.queryByText("Alice Admin")).not.toBeInTheDocument();
+  });
+});
+
+describe("UsersPage — create user modal", () => {
+  beforeEach(() => {
+    vi.mocked(axios.get).mockResolvedValue({ data: USERS });
+  });
+
+  it("shows the Create User button", () => {
+    renderPage(<UsersPage />);
+    expect(screen.getByRole("button", { name: "Create User" })).toBeInTheDocument();
+  });
+
+  it("opens the modal when Create User is clicked", async () => {
+    renderPage(<UsersPage />);
+    await userEvent.click(screen.getByRole("button", { name: "Create User" }));
+    expect(screen.getByRole("heading", { name: "Create User" })).toBeInTheDocument();
+  });
+
+  it("closes the modal when the backdrop is clicked", async () => {
+    renderPage(<UsersPage />);
+    await userEvent.click(screen.getByRole("button", { name: "Create User" }));
+
+    const backdrop = screen.getByRole("heading", { name: "Create User" }).closest(".fixed")!;
+    fireEvent.click(backdrop);
+
+    expect(screen.queryByRole("heading", { name: "Create User" })).not.toBeInTheDocument();
+  });
+
+  it("closes the modal when Escape is pressed", async () => {
+    renderPage(<UsersPage />);
+    await userEvent.click(screen.getByRole("button", { name: "Create User" }));
+
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    expect(screen.queryByRole("heading", { name: "Create User" })).not.toBeInTheDocument();
   });
 });

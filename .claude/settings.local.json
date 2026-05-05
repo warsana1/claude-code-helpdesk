@@ -52,7 +52,8 @@
       "PowerShell($env:DATABASE_URL = \"postgresql://postgres:postgresql190804@localhost:5432/helpdesk_test\"; cd \"C:\\\\Users\\\\inyom\\\\Desktop\\\\playground\\\\HelpDesk\\\\apps\\\\server\"; bunx --bun prisma db push 2>&1)",
       "PowerShell(bun *)",
       "WebSearch",
-      "PowerShell(Start-Process -FilePath \"bun\" -ArgumentList \"dev\" -WorkingDirectory \"C:\\\\Users\\\\inyom\\\\Desktop\\\\playground\\\\HelpDesk\" -WindowStyle Normal)"
+      "PowerShell(Start-Process -FilePath \"bun\" -ArgumentList \"dev\" -WorkingDirectory \"C:\\\\Users\\\\inyom\\\\Desktop\\\\playground\\\\HelpDesk\" -WindowStyle Normal)",
+      "Bash(bun --cwd apps/client run test)"
     ]
   }
 }
