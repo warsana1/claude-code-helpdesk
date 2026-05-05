@@ -223,6 +223,59 @@ Three existing migrations:
 2. `20260503221421_add_user_role`
 3. `20260503222000_role_enum`
 
+## Component Tests (Vitest + React Testing Library)
+
+Tests live alongside their components: `src/pages/Foo.test.tsx`, `src/components/Bar.test.tsx`.
+
+### Commands
+
+```bash
+bun --cwd apps/client run test        # run once (CI)
+bun --cwd apps/client run test:watch  # watch mode
+```
+
+### Setup files
+
+| File | Purpose |
+|---|---|
+| `apps/client/vite.config.ts` | Vitest config — jsdom environment, `src/test/setup.ts` |
+| `apps/client/src/test/setup.ts` | Imports `@testing-library/jest-dom` matchers |
+| `apps/client/src/test/render-utils.tsx` | `renderPage(ui)` — wraps any page in QueryClientProvider + MemoryRouter |
+
+### Patterns
+
+**Always use `renderPage` from `src/test/render-utils.tsx`** — never inline the QueryClient/MemoryRouter boilerplate.
+
+**Mock axios** (never make real HTTP calls in component tests):
+```ts
+vi.mock("axios");
+vi.mocked(axios.get).mockResolvedValue({ data: [...] });  // success
+vi.mocked(axios.get).mockRejectedValue(new Error("..."));  // error
+vi.mocked(axios.get).mockReturnValue(new Promise(() => {}));  // pending/loading
+```
+
+**Mock NavBar** to avoid auth/router dependencies:
+```ts
+vi.mock("../components/NavBar", () => ({ NavBar: () => <nav data-testid="navbar" /> }));
+```
+
+**Reset mocks before each test:**
+```ts
+beforeEach(() => { vi.resetAllMocks(); });
+```
+
+**Use `waitFor` for async state** (after data loads):
+```ts
+await waitFor(() => expect(screen.getByText("Alice")).toBeInTheDocument());
+```
+
+### What to test
+
+- Loading/skeleton state
+- Successful data render (rows, badges, formatted values)
+- Error state message
+- That the correct API endpoint is called with the right args
+
 ## Testing (Playwright)
 
 See [tests/CLAUDE.md](tests/CLAUDE.md) for full setup details.
