@@ -113,6 +113,54 @@ describe("UsersPage — error", () => {
   });
 });
 
+describe("UsersPage — edit user", () => {
+  beforeEach(() => {
+    vi.mocked(axios.get).mockResolvedValue({ data: USERS });
+  });
+
+  it("renders an edit button for each user row", async () => {
+    renderPage(<UsersPage />);
+    await waitFor(() => expect(screen.getByText("Alice Admin")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Edit Alice Admin" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit Bob Agent" })).toBeInTheDocument();
+  });
+
+  it("opens the Edit User modal when an edit button is clicked", async () => {
+    renderPage(<UsersPage />);
+    await waitFor(() => expect(screen.getByText("Alice Admin")).toBeInTheDocument());
+    await userEvent.click(screen.getByRole("button", { name: "Edit Alice Admin" }));
+    expect(screen.getByRole("heading", { name: "Edit User" })).toBeInTheDocument();
+  });
+
+  it("closes the edit modal when the backdrop is clicked", async () => {
+    renderPage(<UsersPage />);
+    await waitFor(() => expect(screen.getByText("Alice Admin")).toBeInTheDocument());
+    await userEvent.click(screen.getByRole("button", { name: "Edit Alice Admin" }));
+
+    const backdrop = screen.getByRole("heading", { name: "Edit User" }).closest(".fixed")!;
+    fireEvent.click(backdrop);
+
+    expect(screen.queryByRole("heading", { name: "Edit User" })).not.toBeInTheDocument();
+  });
+
+  it("closes the edit modal when Escape is pressed", async () => {
+    renderPage(<UsersPage />);
+    await waitFor(() => expect(screen.getByText("Alice Admin")).toBeInTheDocument());
+    await userEvent.click(screen.getByRole("button", { name: "Edit Alice Admin" }));
+
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    expect(screen.queryByRole("heading", { name: "Edit User" })).not.toBeInTheDocument();
+  });
+
+  it("does not show the Create User heading when an edit button is clicked", async () => {
+    renderPage(<UsersPage />);
+    await waitFor(() => expect(screen.getByText("Alice Admin")).toBeInTheDocument());
+    await userEvent.click(screen.getByRole("button", { name: "Edit Alice Admin" }));
+    expect(screen.queryByRole("heading", { name: "Create User" })).not.toBeInTheDocument();
+  });
+});
+
 describe("UsersPage — create user modal", () => {
   beforeEach(() => {
     vi.mocked(axios.get).mockResolvedValue({ data: USERS });

@@ -1,11 +1,15 @@
 import { Router } from "express";
-import { createUserSchema } from "@helpdesk/core";
+import { createUserSchema, updateUserSchema } from "@helpdesk/core";
 import { prisma } from "../db";
 import { Role } from "../generated/prisma";
 import { hashPassword } from "@better-auth/utils/password";
 import { requireAdmin } from "../middleware/auth";
 
 const router = Router();
+
+function firstIssue(result: { error: { issues: Array<{ message: string }> } }) {
+  return result.error.issues[0].message;
+}
 
 router.get("/me", (req, res) => {
   const { user } = res.locals.session;
@@ -23,7 +27,7 @@ router.get("/", requireAdmin, async (_req, res) => {
 router.post("/", requireAdmin, async (req, res, next) => {
   const result = createUserSchema.safeParse(req.body);
   if (!result.success)
-    return res.status(400).json({ error: result.error.issues[0].message });
+    return res.status(400).json({ error: firstIssue(result) });
 
   const { name, email, password } = result.data;
   const id = crypto.randomUUID();
@@ -48,6 +52,35 @@ router.post("/", requireAdmin, async (req, res, next) => {
       select: { id: true, name: true, email: true, role: true, createdAt: true },
     });
     res.status(201).json(user);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/:id", requireAdmin, async (req, res, next) => {
+  const result = updateUserSchema.safeParse(req.body);
+  if (!result.success)
+    return res.status(400).json({ error: firstIssue(result) });
+
+  const { name, email, password } = result.data;
+  const id = req.params.id as string;
+
+  try {
+    const user = await prisma.user.update({
+      where: { id },
+      data: { name: name.trim(), email: email.trim() },
+      select: { id: true, name: true, email: true, role: true, createdAt: true },
+    });
+
+    if (password.trim().length >= 8) {
+      const hash = await hashPassword(password.trim());
+      await prisma.account.updateMany({
+        where: { userId: id, providerId: "credential" },
+        data: { password: hash },
+      });
+    }
+
+    res.json(user);
   } catch (err) {
     next(err);
   }

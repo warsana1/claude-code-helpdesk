@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
+import { Pencil } from "lucide-react";
 import { NavBar } from "../components/NavBar";
 import { CreateUserModal } from "../components/CreateUserModal";
 
@@ -14,7 +15,13 @@ async function fetchUsers(): Promise<User[]> {
 export function UsersPage() {
   const { data: users, isPending, isError } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
   const [showModal, setShowModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const queryClient = useQueryClient();
+
+  function handleCloseModal() {
+    setShowModal(false);
+    setEditingUser(null);
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -36,6 +43,7 @@ export function UsersPage() {
                 {["Name", "Email", "Role", "Joined"].map((h) => (
                   <th key={h} className="text-left px-4 py-3 font-medium text-gray-700">{h}</th>
                 ))}
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -46,6 +54,7 @@ export function UsersPage() {
                       <td className="px-4 py-3"><div className="h-4 w-48 bg-gray-200 rounded animate-pulse" /></td>
                       <td className="px-4 py-3"><div className="h-5 w-14 bg-gray-200 rounded-full animate-pulse" /></td>
                       <td className="px-4 py-3"><div className="h-4 w-24 bg-gray-200 rounded animate-pulse" /></td>
+                      <td className="px-4 py-3" />
                     </tr>
                   ))
                 : users?.map((u) => (
@@ -58,6 +67,15 @@ export function UsersPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-600">{new Date(u.createdAt).toLocaleDateString()}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => setEditingUser(u)}
+                          className="p-1 text-gray-400 hover:text-gray-700 rounded transition-colors"
+                          aria-label={`Edit ${u.name}`}
+                        >
+                          <Pencil size={15} />
+                        </button>
+                      </td>
                     </tr>
                   ))
               }
@@ -66,10 +84,11 @@ export function UsersPage() {
         </div>
         {isError && <p className="mt-4 text-sm text-red-500">Failed to load users.</p>}
       </div>
-      {showModal && (
+      {(showModal || editingUser !== null) && (
         <CreateUserModal
-          onClose={() => setShowModal(false)}
+          onClose={handleCloseModal}
           onSuccess={() => queryClient.invalidateQueries({ queryKey: ["users"] })}
+          user={editingUser ?? undefined}
         />
       )}
     </div>

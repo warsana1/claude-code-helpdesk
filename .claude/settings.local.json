@@ -53,7 +53,8 @@
       "PowerShell(bun *)",
       "WebSearch",
       "PowerShell(Start-Process -FilePath \"bun\" -ArgumentList \"dev\" -WorkingDirectory \"C:\\\\Users\\\\inyom\\\\Desktop\\\\playground\\\\HelpDesk\" -WindowStyle Normal)",
-      "Bash(bun --cwd apps/client run test)"
+      "Bash(bun --cwd apps/client run test)",
+      "Bash(bunx tsc *)"
     ]
   }
 }
