@@ -1,7 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createUserSchema, type CreateUserInput } from "@helpdesk/core";
-import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 
 type FormValues = CreateUserInput;
@@ -9,8 +8,10 @@ type FormValues = CreateUserInput;
 type Props = { onClose: () => void; onSuccess: () => void };
 
 const inputClass = (hasError: boolean) =>
-  `w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${
-    hasError ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-gray-900"
+  `w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+    hasError
+      ? "border-red-500 focus:ring-red-500"
+      : "border-gray-300 focus:ring-gray-900 focus:border-transparent"
   }`;
 
 export function UserForm({ onClose, onSuccess }: Props) {
@@ -21,14 +22,9 @@ export function UserForm({ onClose, onSuccess }: Props) {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(createUserSchema) });
 
-  const mutation = useMutation({
-    mutationFn: (data: FormValues) =>
-      axios.post("/api/users", data, { withCredentials: true }).then((r) => r.data),
-  });
-
   const onSubmit = handleSubmit(async (data) => {
     try {
-      await mutation.mutateAsync(data);
+      await axios.post("/api/users", data, { withCredentials: true });
       onSuccess();
       onClose();
     } catch (err) {
@@ -44,7 +40,7 @@ export function UserForm({ onClose, onSuccess }: Props) {
   });
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-4" noValidate>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
         <input

@@ -20,7 +20,7 @@ router.get("/", requireAdmin, async (_req, res) => {
   res.json(users);
 });
 
-router.post("/", requireAdmin, async (req, res) => {
+router.post("/", requireAdmin, async (req, res, next) => {
   const result = createUserSchema.safeParse(req.body);
   if (!result.success)
     return res.status(400).json({ error: result.error.issues[0].message });
@@ -28,25 +28,29 @@ router.post("/", requireAdmin, async (req, res) => {
   const { name, email, password } = result.data;
   const id = crypto.randomUUID();
   const hash = await hashPassword(password);
-  const user = await prisma.user.create({
-    data: {
-      id,
-      name: name.trim(),
-      email: email.trim(),
-      emailVerified: true,
-      role: Role.agent,
-      accounts: {
-        create: {
-          id: crypto.randomUUID(),
-          accountId: id,
-          providerId: "credential",
-          password: hash,
+  try {
+    const user = await prisma.user.create({
+      data: {
+        id,
+        name: name.trim(),
+        email: email.trim(),
+        emailVerified: true,
+        role: Role.agent,
+        accounts: {
+          create: {
+            id: crypto.randomUUID(),
+            accountId: id,
+            providerId: "credential",
+            password: hash,
+          },
         },
       },
-    },
-    select: { id: true, name: true, email: true, role: true, createdAt: true },
-  });
-  res.status(201).json(user);
+      select: { id: true, name: true, email: true, role: true, createdAt: true },
+    });
+    res.status(201).json(user);
+  } catch (err) {
+    next(err);
+  }
 });
 
 export { router as usersRouter };

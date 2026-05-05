@@ -29,7 +29,7 @@ if (process.env.NODE_ENV === "production") {
   });
   app.use("/api/auth/sign-in", signInLimiter);
 }
-app.all("/api/auth/*", toNodeHandler(auth));
+app.all("/api/auth/*path", toNodeHandler(auth));
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });

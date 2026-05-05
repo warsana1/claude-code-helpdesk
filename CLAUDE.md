@@ -78,13 +78,31 @@ bun test:e2e:headed   # Playwright headed mode
 
 ## Error Handling (server)
 
-Express 5 automatically forwards rejected async promises to the error handler — **do not use try/catch in route handlers**. Throw or let errors propagate naturally.
-
-A global `ErrorRequestHandler` in `apps/server/src/index.ts` (registered last, after all routes) handles all unhandled errors:
+A global `ErrorRequestHandler` in `apps/server/src/index.ts` (registered last, after all routes) handles known error types:
 - `Prisma.PrismaClientKnownRequestError` with code `"P2002"` → 409
 - Everything else → 500 + `console.error`
 
-When a new route needs a specific error mapped to a non-500 status, add a case to that handler rather than wrapping the route in try/catch.
+For database operations that can produce expected errors (unique constraints, etc.), wrap only the DB call in try/catch and forward to the global handler with `next(err)`:
+
+```ts
+router.post("/", async (req, res, next) => {
+  // validation, hashing, etc. — no try/catch needed
+  try {
+    const result = await prisma.foo.create({ ... });
+    res.status(201).json(result);
+  } catch (err) {
+    next(err); // global handler maps P2002 → 409, rest → 500
+  }
+});
+```
+
+Express 5 automatically forwards unhandled async rejections, but explicit `next(err)` is more reliable under Bun and makes the intent clear.
+
+**Express 5 wildcard routes** require a named parameter — use `/*path` not `/*`:
+```ts
+app.all("/api/auth/*path", handler); // ✓ Express 5
+app.all("/api/auth/*", handler);     // ✗ throws PathError at startup
+```
 
 ## API Validation (server)
 
