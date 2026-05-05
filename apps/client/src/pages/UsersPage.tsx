@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { NavBar } from "../components/NavBar";
 import { CreateUserModal } from "../components/CreateUserModal";
+import { DeleteUserModal } from "../components/DeleteUserModal";
 
 type User = { id: string; name: string; email: string; role: string; createdAt: string };
 
@@ -16,6 +17,7 @@ export function UsersPage() {
   const { data: users, isPending, isError } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const queryClient = useQueryClient();
 
   function handleCloseModal() {
@@ -67,14 +69,25 @@ export function UsersPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-600">{new Date(u.createdAt).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => setEditingUser(u)}
-                          className="p-1 text-gray-400 hover:text-gray-700 rounded transition-colors"
-                          aria-label={`Edit ${u.name}`}
-                        >
-                          <Pencil size={15} />
-                        </button>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setEditingUser(u)}
+                            className="p-1 text-gray-400 hover:text-gray-700 rounded transition-colors"
+                            aria-label={`Edit ${u.name}`}
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          {u.role !== "admin" && (
+                            <button
+                              onClick={() => setDeletingUser(u)}
+                              className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
+                              aria-label={`Delete ${u.name}`}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -89,6 +102,13 @@ export function UsersPage() {
           onClose={handleCloseModal}
           onSuccess={() => queryClient.invalidateQueries({ queryKey: ["users"] })}
           user={editingUser ?? undefined}
+        />
+      )}
+      {deletingUser !== null && (
+        <DeleteUserModal
+          user={deletingUser}
+          onClose={() => setDeletingUser(null)}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ["users"] })}
         />
       )}
     </div>

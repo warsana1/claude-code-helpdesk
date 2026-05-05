@@ -54,7 +54,8 @@
       "WebSearch",
       "PowerShell(Start-Process -FilePath \"bun\" -ArgumentList \"dev\" -WorkingDirectory \"C:\\\\Users\\\\inyom\\\\Desktop\\\\playground\\\\HelpDesk\" -WindowStyle Normal)",
       "Bash(bun --cwd apps/client run test)",
-      "Bash(bunx tsc *)"
+      "Bash(bunx tsc *)",
+      "Bash(bunx --bun prisma migrate dev --name add_user_soft_delete)"
     ]
   }
 }

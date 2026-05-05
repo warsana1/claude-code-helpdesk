@@ -161,6 +161,52 @@ describe("UsersPage — edit user", () => {
   });
 });
 
+describe("UsersPage — delete user", () => {
+  beforeEach(() => {
+    vi.mocked(axios.get).mockResolvedValue({ data: USERS });
+  });
+
+  it("renders a delete button for non-admin users", async () => {
+    renderPage(<UsersPage />);
+    await waitFor(() => expect(screen.getByText("Bob Agent")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Delete Bob Agent" })).toBeInTheDocument();
+  });
+
+  it("does not render a delete button for admin users", async () => {
+    renderPage(<UsersPage />);
+    await waitFor(() => expect(screen.getByText("Alice Admin")).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: "Delete Alice Admin" })).not.toBeInTheDocument();
+  });
+
+  it("opens the Delete User modal when a delete button is clicked", async () => {
+    renderPage(<UsersPage />);
+    await waitFor(() => expect(screen.getByText("Bob Agent")).toBeInTheDocument());
+    await userEvent.click(screen.getByRole("button", { name: "Delete Bob Agent" }));
+    expect(screen.getByRole("heading", { name: "Delete User" })).toBeInTheDocument();
+  });
+
+  it("closes the delete modal when the backdrop is clicked", async () => {
+    renderPage(<UsersPage />);
+    await waitFor(() => expect(screen.getByText("Bob Agent")).toBeInTheDocument());
+    await userEvent.click(screen.getByRole("button", { name: "Delete Bob Agent" }));
+
+    const backdrop = screen.getByRole("heading", { name: "Delete User" }).closest(".fixed")!;
+    fireEvent.click(backdrop);
+
+    expect(screen.queryByRole("heading", { name: "Delete User" })).not.toBeInTheDocument();
+  });
+
+  it("closes the delete modal when Escape is pressed", async () => {
+    renderPage(<UsersPage />);
+    await waitFor(() => expect(screen.getByText("Bob Agent")).toBeInTheDocument());
+    await userEvent.click(screen.getByRole("button", { name: "Delete Bob Agent" }));
+
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    expect(screen.queryByRole("heading", { name: "Delete User" })).not.toBeInTheDocument();
+  });
+});
+
 describe("UsersPage — create user modal", () => {
   beforeEach(() => {
     vi.mocked(axios.get).mockResolvedValue({ data: USERS });
