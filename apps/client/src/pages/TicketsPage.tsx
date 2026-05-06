@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router";
 import {
   useReactTable,
   getCoreRowModel,
@@ -84,9 +85,12 @@ const columns: ColumnDef<Ticket, any>[] = [
     header: "Subject",
     enableSorting: true,
     cell: (info) => (
-      <span className="text-gray-900 font-medium max-w-xs truncate block">
+      <Link
+        to={`/tickets/${info.row.original.id}`}
+        className="text-gray-900 font-medium max-w-xs truncate block hover:text-blue-600 hover:underline"
+      >
         {info.getValue()}
-      </span>
+      </Link>
     ),
   }),
   columnHelper.accessor("fromName", {
