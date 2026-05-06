@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { ArrowLeft } from "lucide-react";
 import { TicketStatus, TicketCategory, TicketSource } from "@helpdesk/core";
@@ -21,10 +21,28 @@ type TicketDetail = {
   updatedAt: string;
 };
 
+type Agent = { id: string; name: string };
+
 async function fetchTicket(id: number): Promise<TicketDetail> {
   const { data } = await axios.get<TicketDetail>(`/api/tickets/${id}`, {
     withCredentials: true,
   });
+  return data;
+}
+
+async function fetchAgents(): Promise<Agent[]> {
+  const { data } = await axios.get<Agent[]>("/api/users/agents", {
+    withCredentials: true,
+  });
+  return data;
+}
+
+async function updateAssignee(ticketId: number, assigneeId: string | null): Promise<TicketDetail> {
+  const { data } = await axios.patch<TicketDetail>(
+    `/api/tickets/${ticketId}`,
+    { assigneeId },
+    { withCredentials: true },
+  );
   return data;
 }
 
@@ -43,11 +61,24 @@ const statusStyles: Record<TicketStatus, string> = {
 export function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
   const ticketId = Number(id);
+  const queryClient = useQueryClient();
 
   const { data: ticket, isPending, isError } = useQuery({
     queryKey: ["ticket", ticketId],
     queryFn: () => fetchTicket(ticketId),
     enabled: !isNaN(ticketId),
+  });
+
+  const { data: agents = [] } = useQuery({
+    queryKey: ["agents"],
+    queryFn: fetchAgents,
+  });
+
+  const { mutate: assignAgent, isPending: isAssigning } = useMutation({
+    mutationFn: (assigneeId: string | null) => updateAssignee(ticketId, assigneeId),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["ticket", ticketId], updated);
+    },
   });
 
   return (
@@ -112,7 +143,20 @@ export function TicketDetailPage() {
                 <p className="text-gray-500">{ticket.fromEmail}</p>
               </div>
               <div>
-                <p className="text-gray-700"><span className="text-gray-400 text-xs uppercase tracking-wide">Assigned to:</span> <span className="italic text-gray-400">Unassigned</span></p>
+                <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Assigned to</p>
+                <select
+                  value={ticket.assignee?.id ?? ""}
+                  disabled={isAssigning}
+                  onChange={(e) => assignAgent(e.target.value || null)}
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-60"
+                >
+                  <option value="">Unassigned</option>
+                  {agents.map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <p className="text-gray-400 text-xs uppercase tracking-wide mb-0.5">Created</p>

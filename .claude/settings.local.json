@@ -78,7 +78,8 @@
       "Bash(pkill -9 -f \"bun\")",
       "PowerShell(Stop-Process *)",
       "Bash(bunx --bun tsc --noEmit --project apps/client/tsconfig.json)",
-      "Bash(bunx --bun tsc --noEmit --project apps/server/tsconfig.json)"
+      "Bash(bunx --bun tsc --noEmit --project apps/server/tsconfig.json)",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }

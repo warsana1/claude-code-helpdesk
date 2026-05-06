@@ -16,6 +16,15 @@ router.get("/me", (req, res) => {
   res.json({ id: user.id, name: user.name, email: user.email, role: user.role });
 });
 
+router.get("/agents", async (_req, res) => {
+  const agents = await prisma.user.findMany({
+    where: { deletedAt: null, role: Role.agent },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
+  res.json(agents);
+});
+
 router.get("/", requireAdmin, async (_req, res) => {
   const users = await prisma.user.findMany({
     where: { deletedAt: null },
