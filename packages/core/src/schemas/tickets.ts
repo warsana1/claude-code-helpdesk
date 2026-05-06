@@ -26,3 +26,19 @@ export const updateTicketSchema = z.object({
 });
 
 export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
+
+export const TicketSortField = {
+  id: "id",
+  subject: "subject",
+  fromName: "fromName",
+  category: "category",
+  status: "status",
+  createdAt: "createdAt",
+} as const;
+export type TicketSortField = (typeof TicketSortField)[keyof typeof TicketSortField];
+
+export const ticketSortSchema = z.object({
+  sortBy: z.enum(["id", "subject", "fromName", "category", "status", "createdAt"]).optional(),
+  sortOrder: z.enum(["asc", "desc"]).optional(),
+});
+export type TicketSortParams = z.infer<typeof ticketSortSchema>;

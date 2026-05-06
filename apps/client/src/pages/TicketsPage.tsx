@@ -1,8 +1,16 @@
 import { useState, useMemo } from "react";
+import {
+  useReactTable,
+  getCoreRowModel,
+  createColumnHelper,
+  flexRender,
+  type SortingState,
+  type ColumnDef,
+} from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import { ChevronDown, ChevronUp } from "lucide-react";
-import { TicketStatus, TicketCategory, TicketSource } from "@helpdesk/core";
+import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
+import { TicketStatus, TicketCategory, TicketSource, type TicketSortField } from "@helpdesk/core";
 import { NavBar } from "../components/NavBar";
 
 type Ticket = {
@@ -19,8 +27,16 @@ type Ticket = {
 
 type StatusFilter = "all" | TicketStatus;
 
-async function fetchTickets(): Promise<Ticket[]> {
-  const { data } = await axios.get<Ticket[]>("/api/tickets", { withCredentials: true });
+async function fetchTickets(
+  sortBy: TicketSortField | undefined,
+  sortOrder: "asc" | "desc"
+): Promise<Ticket[]> {
+  const params: Record<string, string> = { sortOrder };
+  if (sortBy) params.sortBy = sortBy;
+  const { data } = await axios.get<Ticket[]>("/api/tickets", {
+    params,
+    withCredentials: true,
+  });
   return data;
 }
 
@@ -43,14 +59,88 @@ const STATUS_TABS: { label: string; value: StatusFilter }[] = [
   { label: "Closed", value: TicketStatus.closed },
 ];
 
-export function TicketsPage() {
-  const { data: tickets, isPending, isError } = useQuery({
-    queryKey: ["tickets"],
-    queryFn: fetchTickets,
-  });
+const columnHelper = createColumnHelper<Ticket>();
 
+const columns: ColumnDef<Ticket, any>[] = [
+  columnHelper.accessor("id", {
+    header: "#",
+    enableSorting: true,
+    cell: (info) => (
+      <span className="text-gray-400 font-mono text-xs">#{info.getValue()}</span>
+    ),
+  }),
+  columnHelper.accessor("subject", {
+    header: "Subject",
+    enableSorting: true,
+    cell: (info) => (
+      <span className="text-gray-900 font-medium max-w-xs truncate block">
+        {info.getValue()}
+      </span>
+    ),
+  }),
+  columnHelper.accessor("fromName", {
+    header: "From",
+    enableSorting: true,
+    cell: (info) => {
+      const ticket = info.row.original;
+      return (
+        <div>
+          <div>{ticket.fromName}</div>
+          <div className="text-xs text-gray-400">{ticket.fromEmail}</div>
+        </div>
+      );
+    },
+  }),
+  columnHelper.accessor("category", {
+    header: "Category",
+    enableSorting: true,
+    cell: (info) => (
+      <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+        {categoryLabel[info.row.original.category]}
+      </span>
+    ),
+  }),
+  columnHelper.accessor("status", {
+    header: "Status",
+    enableSorting: true,
+    cell: (info) => (
+      <span
+        className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusStyles[info.row.original.status]}`}
+      >
+        {info.row.original.status}
+      </span>
+    ),
+  }),
+  columnHelper.display({
+    id: "assignee",
+    header: "Assigned To",
+    enableSorting: false,
+    cell: (info) =>
+      info.row.original.assignee?.name ?? (
+        <span className="text-gray-400">—</span>
+      ),
+  }),
+  columnHelper.accessor("createdAt", {
+    header: "Received",
+    enableSorting: true,
+    cell: (info) => new Date(info.getValue()).toLocaleDateString(),
+  }),
+];
+
+export function TicketsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "createdAt", desc: true },
+  ]);
+
+  const sortBy = sorting[0]?.id as TicketSortField | undefined;
+  const sortOrder: "asc" | "desc" = sorting[0]?.desc ? "desc" : "asc";
+
+  const { data: tickets, isPending, isError } = useQuery({
+    queryKey: ["tickets", sortBy, sortOrder],
+    queryFn: () => fetchTickets(sortBy, sortOrder),
+    placeholderData: (prev) => prev,
+  });
 
   const counts = useMemo(() => {
     if (!tickets) return { all: 0, open: 0, resolved: 0, closed: 0 };
@@ -62,14 +152,22 @@ export function TicketsPage() {
     };
   }, [tickets]);
 
-  const displayed = useMemo(() => {
+  const filteredTickets = useMemo(() => {
     if (!tickets) return [];
-    const filtered =
-      statusFilter === "all" ? tickets : tickets.filter((t) => t.status === statusFilter);
-    return sortOrder === "desc"
-      ? [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      : [...filtered].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  }, [tickets, statusFilter, sortOrder]);
+    return statusFilter === "all"
+      ? tickets
+      : tickets.filter((t) => t.status === statusFilter);
+  }, [tickets, statusFilter]);
+
+  const table = useReactTable({
+    data: filteredTickets,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    manualSorting: true,
+    enableMultiSort: false,
+    getCoreRowModel: getCoreRowModel(),
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -95,7 +193,9 @@ export function TicketsPage() {
               {!isPending && (
                 <span
                   className={`text-xs px-1.5 py-0.5 rounded-full font-normal ${
-                    statusFilter === value ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
+                    statusFilter === value
+                      ? "bg-white/20 text-white"
+                      : "bg-gray-100 text-gray-500"
                   }`}
                 >
                   {counts[value]}
@@ -108,74 +208,100 @@ export function TicketsPage() {
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">#</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Subject</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">From</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Category</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Status</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-700">Assigned To</th>
-                <th className="px-4 py-3 font-medium text-gray-700">
-                  <button
-                    onClick={() => setSortOrder((o) => (o === "desc" ? "asc" : "desc"))}
-                    className="flex items-center gap-1 text-gray-700 hover:text-gray-900 transition-colors"
-                  >
-                    Received
-                    {sortOrder === "desc" ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-                  </button>
-                </th>
-              </tr>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    const canSort = header.column.getCanSort();
+                    const sorted = header.column.getIsSorted();
+                    return (
+                      <th
+                        key={header.id}
+                        className={`text-left px-4 py-3 font-medium text-gray-700 ${
+                          canSort ? "cursor-pointer select-none" : ""
+                        }`}
+                        onClick={
+                          canSort
+                            ? header.column.getToggleSortingHandler()
+                            : undefined
+                        }
+                      >
+                        <div className="flex items-center gap-1">
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                          {canSort && (
+                            <>
+                              {sorted === "asc" && <ChevronUp size={14} />}
+                              {sorted === "desc" && <ChevronDown size={14} />}
+                              {!sorted && (
+                                <ChevronsUpDown
+                                  size={14}
+                                  className="text-gray-400"
+                                />
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </th>
+                    );
+                  })}
+                </tr>
+              ))}
             </thead>
             <tbody className="divide-y divide-gray-100">
               {isPending
                 ? Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i}>
-                      <td className="px-4 py-3"><div className="h-4 w-8 bg-gray-200 rounded animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-4 w-48 bg-gray-200 rounded animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-4 w-36 bg-gray-200 rounded animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-4 w-24 bg-gray-200 rounded animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-4 w-24 bg-gray-200 rounded animate-pulse" /></td>
-                    </tr>
-                  ))
-                : displayed.map((t) => (
-                    <tr key={t.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-gray-400 font-mono text-xs">#{t.id}</td>
-                      <td className="px-4 py-3 text-gray-900 font-medium max-w-xs truncate">{t.subject}</td>
-                      <td className="px-4 py-3 text-gray-600">
-                        <div>{t.fromName}</div>
-                        <div className="text-xs text-gray-400">{t.fromEmail}</div>
+                      <td className="px-4 py-3">
+                        <div className="h-4 w-8 bg-gray-200 rounded animate-pulse" />
                       </td>
                       <td className="px-4 py-3">
-                        <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                          {categoryLabel[t.category]}
-                        </span>
+                        <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusStyles[t.status]}`}>
-                          {t.status}
-                        </span>
+                        <div className="h-4 w-36 bg-gray-200 rounded animate-pulse" />
                       </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {t.assignee?.name ?? <span className="text-gray-400">—</span>}
+                      <td className="px-4 py-3">
+                        <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse" />
                       </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {new Date(t.createdAt).toLocaleDateString()}
+                      <td className="px-4 py-3">
+                        <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse" />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
                       </td>
                     </tr>
                   ))
-              }
+                : table.getRowModel().rows.map((row) => (
+                    <tr key={row.id} className="hover:bg-gray-50">
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} className="px-4 py-3 text-gray-600">
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
             </tbody>
           </table>
         </div>
 
-        {!isPending && displayed.length === 0 && (
+        {!isPending && filteredTickets.length === 0 && (
           <p className="mt-6 text-center text-sm text-gray-400">
-            {statusFilter === "all" ? "No tickets yet." : `No ${statusFilter} tickets.`}
+            {statusFilter === "all"
+              ? "No tickets yet."
+              : `No ${statusFilter} tickets.`}
           </p>
         )}
-        {isError && <p className="mt-4 text-sm text-red-500">Failed to load tickets.</p>}
+        {isError && (
+          <p className="mt-4 text-sm text-red-500">Failed to load tickets.</p>
+        )}
       </div>
     </div>
   );

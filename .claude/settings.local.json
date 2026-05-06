@@ -76,7 +76,9 @@
       "Bash(printenv INBOUND_EMAIL_WEBHOOK_SECRET)",
       "Bash(INBOUND_EMAIL_WEBHOOK_SECRET=dev-webhook-secret-1234 DATABASE_URL=\"postgresql://postgres:postgresql190804@localhost:5432/helpdesk\" BETTER_AUTH_SECRET=5X/lRyQRyPIfS1mUwMsPofpb9XZsmLdxELyG/Bmt59Y= BETTER_AUTH_URL=http://localhost:3001 CLIENT_ORIGIN=http://localhost:5173 bun run src/index.ts)",
       "Bash(pkill -9 -f \"bun\")",
-      "PowerShell(Stop-Process *)"
+      "PowerShell(Stop-Process *)",
+      "Bash(bunx --bun tsc --noEmit --project apps/client/tsconfig.json)",
+      "Bash(bunx --bun tsc --noEmit --project apps/server/tsconfig.json)"
     ]
   }
 }

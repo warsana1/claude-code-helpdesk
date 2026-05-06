@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { updateTicketSchema } from "@helpdesk/core";
+import { updateTicketSchema, ticketSortSchema } from "@helpdesk/core";
 import { prisma } from "../db";
 
 const router = Router();
@@ -8,7 +8,13 @@ function firstIssue(result: { error: { issues: Array<{ message: string }> } }) {
   return result.error.issues[0].message;
 }
 
-router.get("/", async (_req, res) => {
+router.get("/", async (req, res) => {
+  const result = ticketSortSchema.safeParse(req.query);
+  if (!result.success)
+    return res.status(400).json({ error: firstIssue(result) });
+
+  const { sortBy = "createdAt", sortOrder = "desc" } = result.data;
+
   const tickets = await prisma.ticket.findMany({
     select: {
       id: true,
@@ -21,7 +27,7 @@ router.get("/", async (_req, res) => {
       createdAt: true,
       assignee: { select: { id: true, name: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { [sortBy]: sortOrder },
   });
   res.json(tickets);
 });
