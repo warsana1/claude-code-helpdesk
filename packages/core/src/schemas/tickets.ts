@@ -40,5 +40,7 @@ export type TicketSortField = (typeof TicketSortField)[keyof typeof TicketSortFi
 export const ticketSortSchema = z.object({
   sortBy: z.enum(["id", "subject", "fromName", "category", "status", "createdAt"]).optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
+  category: z.enum(["general_question", "technical_question", "refund_request"]).optional(),
+  search: z.string().optional(),
 });
 export type TicketSortParams = z.infer<typeof ticketSortSchema>;

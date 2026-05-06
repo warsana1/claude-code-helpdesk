@@ -13,7 +13,7 @@ router.get("/", async (req, res) => {
   if (!result.success)
     return res.status(400).json({ error: firstIssue(result) });
 
-  const { sortBy = "createdAt", sortOrder = "desc" } = result.data;
+  const { sortBy = "createdAt", sortOrder = "desc", category, search } = result.data;
 
   const tickets = await prisma.ticket.findMany({
     select: {
@@ -26,6 +26,16 @@ router.get("/", async (req, res) => {
       source: true,
       createdAt: true,
       assignee: { select: { id: true, name: true } },
+    },
+    where: {
+      ...(category ? { category } : {}),
+      ...(search ? {
+        OR: [
+          { subject:   { contains: search, mode: "insensitive" } },
+          { fromName:  { contains: search, mode: "insensitive" } },
+          { fromEmail: { contains: search, mode: "insensitive" } },
+        ],
+      } : {}),
     },
     orderBy: { [sortBy]: sortOrder },
   });

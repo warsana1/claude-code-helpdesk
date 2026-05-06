@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronsUpDown, Search } from "lucide-react";
 import { TicketStatus, TicketCategory, TicketSource, type TicketSortField } from "@helpdesk/core";
 import { NavBar } from "../components/NavBar";
 
@@ -26,13 +26,18 @@ type Ticket = {
 };
 
 type StatusFilter = "all" | TicketStatus;
+type CategoryFilter = TicketCategory | "";
 
 async function fetchTickets(
   sortBy: TicketSortField | undefined,
-  sortOrder: "asc" | "desc"
+  sortOrder: "asc" | "desc",
+  category: CategoryFilter,
+  search: string,
 ): Promise<Ticket[]> {
   const params: Record<string, string> = { sortOrder };
   if (sortBy) params.sortBy = sortBy;
+  if (category) params.category = category;
+  if (search) params.search = search;
   const { data } = await axios.get<Ticket[]>("/api/tickets", {
     params,
     withCredentials: true,
@@ -111,15 +116,6 @@ const columns: ColumnDef<Ticket, any>[] = [
       </span>
     ),
   }),
-  columnHelper.display({
-    id: "assignee",
-    header: "Assigned To",
-    enableSorting: false,
-    cell: (info) =>
-      info.row.original.assignee?.name ?? (
-        <span className="text-gray-400">—</span>
-      ),
-  }),
   columnHelper.accessor("createdAt", {
     header: "Received",
     enableSorting: true,
@@ -129,16 +125,26 @@ const columns: ColumnDef<Ticket, any>[] = [
 
 export function TicketsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
   const [sorting, setSorting] = useState<SortingState>([
     { id: "createdAt", desc: true },
   ]);
 
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
   const sortBy = sorting[0]?.id as TicketSortField | undefined;
   const sortOrder: "asc" | "desc" = sorting[0]?.desc ? "desc" : "asc";
 
+  const hasActiveFilters = !!(categoryFilter || search);
+
   const { data: tickets, isPending, isError } = useQuery({
-    queryKey: ["tickets", sortBy, sortOrder],
-    queryFn: () => fetchTickets(sortBy, sortOrder),
+    queryKey: ["tickets", sortBy, sortOrder, categoryFilter, search],
+    queryFn: () => fetchTickets(sortBy, sortOrder, categoryFilter, search),
     placeholderData: (prev) => prev,
   });
 
@@ -173,8 +179,18 @@ export function TicketsPage() {
     <div className="min-h-screen bg-gray-50">
       <NavBar />
       <div className="max-w-6xl mx-auto px-4 py-10">
-        <div className="mb-6">
+        <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Tickets</h1>
+          <div className="relative">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search tickets…"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="pl-9 pr-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 w-64"
+            />
+          </div>
         </div>
 
         {/* Status filter tabs */}
@@ -203,6 +219,33 @@ export function TicketsPage() {
               )}
             </button>
           ))}
+        </div>
+
+        {/* Filter bar */}
+        <div className="flex items-center gap-2 mb-4">
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value as CategoryFilter)}
+            className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300"
+          >
+            <option value="">All Categories</option>
+            <option value={TicketCategory.general_question}>General</option>
+            <option value={TicketCategory.technical_question}>Technical</option>
+            <option value={TicketCategory.refund_request}>Refund</option>
+          </select>
+
+          {hasActiveFilters && (
+            <button
+              onClick={() => {
+                setCategoryFilter("");
+                setSearchInput("");
+                setSearch("");
+              }}
+              className="px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -271,9 +314,6 @@ export function TicketsPage() {
                       <td className="px-4 py-3">
                         <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-                      </td>
                     </tr>
                   ))
                 : table.getRowModel().rows.map((row) => (
@@ -294,7 +334,9 @@ export function TicketsPage() {
 
         {!isPending && filteredTickets.length === 0 && (
           <p className="mt-6 text-center text-sm text-gray-400">
-            {statusFilter === "all"
+            {search
+              ? `No tickets matching "${search}".`
+              : statusFilter === "all"
               ? "No tickets yet."
               : `No ${statusFilter} tickets.`}
           </p>
