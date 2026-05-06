@@ -41,6 +41,9 @@ export const ticketSortSchema = z.object({
   sortBy: z.enum(["id", "subject", "fromName", "category", "status", "createdAt"]).optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
   category: z.enum(["general_question", "technical_question", "refund_request"]).optional(),
+  status: z.enum(["open", "resolved", "closed"]).optional(),
   search: z.string().optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
 });
 export type TicketSortParams = z.infer<typeof ticketSortSchema>;

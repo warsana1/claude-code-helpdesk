@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import { ChevronDown, ChevronUp, ChevronsUpDown, Search } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronsUpDown, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { TicketStatus, TicketCategory, TicketSource, type TicketSortField } from "@helpdesk/core";
 import { NavBar } from "../components/NavBar";
 
@@ -25,20 +25,26 @@ type Ticket = {
   assignee: { id: string; name: string } | null;
 };
 
+type TicketsResponse = { data: Ticket[]; total: number };
 type StatusFilter = "all" | TicketStatus;
 type CategoryFilter = TicketCategory | "";
+
+const PAGE_SIZE = 10;
 
 async function fetchTickets(
   sortBy: TicketSortField | undefined,
   sortOrder: "asc" | "desc",
   category: CategoryFilter,
+  status: StatusFilter,
   search: string,
-): Promise<Ticket[]> {
-  const params: Record<string, string> = { sortOrder };
+  page: number,
+): Promise<TicketsResponse> {
+  const params: Record<string, string | number> = { sortOrder, pageSize: PAGE_SIZE, page };
   if (sortBy) params.sortBy = sortBy;
   if (category) params.category = category;
+  if (status !== "all") params.status = status;
   if (search) params.search = search;
-  const { data } = await axios.get<Ticket[]>("/api/tickets", {
+  const { data } = await axios.get<TicketsResponse>("/api/tickets", {
     params,
     withCredentials: true,
   });
@@ -128,6 +134,7 @@ export function TicketsPage() {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [sorting, setSorting] = useState<SortingState>([
     { id: "createdAt", desc: true },
   ]);
@@ -137,36 +144,29 @@ export function TicketsPage() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
+  // Reset to page 1 whenever any filter/sort changes
+  useEffect(() => {
+    setPage(1);
+  }, [sorting, categoryFilter, statusFilter, search]);
+
   const sortBy = sorting[0]?.id as TicketSortField | undefined;
   const sortOrder: "asc" | "desc" = sorting[0]?.desc ? "desc" : "asc";
-
   const hasActiveFilters = !!(categoryFilter || search);
 
-  const { data: tickets, isPending, isError } = useQuery({
-    queryKey: ["tickets", sortBy, sortOrder, categoryFilter, search],
-    queryFn: () => fetchTickets(sortBy, sortOrder, categoryFilter, search),
+  const { data, isPending, isError } = useQuery({
+    queryKey: ["tickets", sortBy, sortOrder, categoryFilter, statusFilter, search, page],
+    queryFn: () => fetchTickets(sortBy, sortOrder, categoryFilter, statusFilter, search, page),
     placeholderData: (prev) => prev,
   });
 
-  const counts = useMemo(() => {
-    if (!tickets) return { all: 0, open: 0, resolved: 0, closed: 0 };
-    return {
-      all: tickets.length,
-      open: tickets.filter((t) => t.status === "open").length,
-      resolved: tickets.filter((t) => t.status === "resolved").length,
-      closed: tickets.filter((t) => t.status === "closed").length,
-    };
-  }, [tickets]);
-
-  const filteredTickets = useMemo(() => {
-    if (!tickets) return [];
-    return statusFilter === "all"
-      ? tickets
-      : tickets.filter((t) => t.status === statusFilter);
-  }, [tickets, statusFilter]);
+  const tickets = data?.data ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(page * PAGE_SIZE, total);
 
   const table = useReactTable({
-    data: filteredTickets,
+    data: tickets,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
@@ -199,24 +199,13 @@ export function TicketsPage() {
             <button
               key={value}
               onClick={() => setStatusFilter(value)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 statusFilter === value
                   ? "bg-gray-900 text-white"
                   : "text-gray-600 hover:bg-gray-100"
               }`}
             >
               {label}
-              {!isPending && (
-                <span
-                  className={`text-xs px-1.5 py-0.5 rounded-full font-normal ${
-                    statusFilter === value
-                      ? "bg-white/20 text-white"
-                      : "bg-gray-100 text-gray-500"
-                  }`}
-                >
-                  {counts[value]}
-                </span>
-              )}
             </button>
           ))}
         </div>
@@ -262,27 +251,15 @@ export function TicketsPage() {
                         className={`text-left px-4 py-3 font-medium text-gray-700 ${
                           canSort ? "cursor-pointer select-none" : ""
                         }`}
-                        onClick={
-                          canSort
-                            ? header.column.getToggleSortingHandler()
-                            : undefined
-                        }
+                        onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
                       >
                         <div className="flex items-center gap-1">
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          {flexRender(header.column.columnDef.header, header.getContext())}
                           {canSort && (
                             <>
                               {sorted === "asc" && <ChevronUp size={14} />}
                               {sorted === "desc" && <ChevronDown size={14} />}
-                              {!sorted && (
-                                <ChevronsUpDown
-                                  size={14}
-                                  className="text-gray-400"
-                                />
-                              )}
+                              {!sorted && <ChevronsUpDown size={14} className="text-gray-400" />}
                             </>
                           )}
                         </div>
@@ -294,45 +271,58 @@ export function TicketsPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {isPending
-                ? Array.from({ length: 5 }).map((_, i) => (
+                ? Array.from({ length: PAGE_SIZE }).map((_, i) => (
                     <tr key={i}>
-                      <td className="px-4 py-3">
-                        <div className="h-4 w-8 bg-gray-200 rounded animate-pulse" />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="h-4 w-36 bg-gray-200 rounded animate-pulse" />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse" />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse" />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-                      </td>
+                      <td className="px-4 py-3"><div className="h-4 w-8 bg-gray-200 rounded animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-4 w-48 bg-gray-200 rounded animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-4 w-36 bg-gray-200 rounded animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-4 w-24 bg-gray-200 rounded animate-pulse" /></td>
                     </tr>
                   ))
                 : table.getRowModel().rows.map((row) => (
                     <tr key={row.id} className="hover:bg-gray-50">
                       {row.getVisibleCells().map((cell) => (
                         <td key={cell.id} className="px-4 py-3 text-gray-600">
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
                       ))}
                     </tr>
                   ))}
             </tbody>
           </table>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
+            <p className="text-sm text-gray-500">
+              {total === 0
+                ? "No results"
+                : `Showing ${rangeStart}–${rangeEnd} of ${total}`}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => p - 1)}
+                disabled={page === 1}
+                className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="text-sm text-gray-700">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page >= totalPages}
+                className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
         </div>
 
-        {!isPending && filteredTickets.length === 0 && (
+        {!isPending && tickets.length === 0 && (
           <p className="mt-6 text-center text-sm text-gray-400">
             {search
               ? `No tickets matching "${search}".`
