@@ -4,6 +4,7 @@ import { authClient } from "./lib/auth-client";
 import { NavBar } from "./components/NavBar";
 import { LoginPage } from "./pages/LoginPage";
 import { UsersPage } from "./pages/UsersPage";
+import { TicketsPage } from "./pages/TicketsPage";
 
 export default function App() {
   const { data: session, isPending } = authClient.useSession();
@@ -25,6 +26,10 @@ export default function App() {
       <Route
         path="/"
         element={session ? <HomePage /> : <Navigate to="/login" replace />}
+      />
+      <Route
+        path="/tickets"
+        element={session ? <TicketsPage /> : <Navigate to="/login" replace />}
       />
       <Route
         path="/users"

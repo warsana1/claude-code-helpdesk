@@ -5,6 +5,7 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth";
 import { ticketsRouter } from "./routes/tickets";
 import { usersRouter } from "./routes/users";
+import { webhooksRouter } from "./routes/webhooks";
 import { requireAuth } from "./middleware/auth";
 import { Prisma } from "./generated/prisma";
 
@@ -35,12 +36,13 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+app.use("/api/webhooks", webhooksRouter);
 app.use("/api/tickets", requireAuth, ticketsRouter);
 app.use("/api/users", requireAuth, usersRouter);
 
 const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002")
-    return res.status(409).json({ error: "A user with that email already exists." });
+    return res.status(409).json({ error: "A record with that value already exists." });
   console.error(err);
   res.status(500).json({ error: "Internal server error." });
 };

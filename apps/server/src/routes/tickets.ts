@@ -1,11 +1,57 @@
-import { Router, type Request, type Response } from "express";
+import { Router } from "express";
+import { updateTicketSchema } from "@helpdesk/core";
+import { prisma } from "../db";
 
-export const ticketsRouter = Router();
+const router = Router();
 
-ticketsRouter.get("/", (_req: Request, res: Response) => {
-  res.json({ tickets: [] });
+function firstIssue(result: { error: { issues: Array<{ message: string }> } }) {
+  return result.error.issues[0].message;
+}
+
+router.get("/", async (_req, res) => {
+  const tickets = await prisma.ticket.findMany({
+    select: {
+      id: true,
+      subject: true,
+      fromEmail: true,
+      fromName: true,
+      category: true,
+      status: true,
+      source: true,
+      createdAt: true,
+      assignee: { select: { id: true, name: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  res.json(tickets);
 });
 
-ticketsRouter.get("/:id", (req: Request, res: Response) => {
-  res.json({ ticket: null, id: req.params.id });
+router.get("/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  const ticket = await prisma.ticket.findUnique({
+    where: { id },
+    include: { assignee: { select: { id: true, name: true } } },
+  });
+  if (!ticket) return res.status(404).json({ error: "Ticket not found." });
+  res.json(ticket);
 });
+
+router.patch("/:id", async (req, res, next) => {
+  const result = updateTicketSchema.safeParse(req.body);
+  if (!result.success)
+    return res.status(400).json({ error: firstIssue(result) });
+
+  const id = Number(req.params.id);
+  try {
+    const ticket = await prisma.ticket.update({
+      where: { id },
+      data: result.data,
+      include: { assignee: { select: { id: true, name: true } } },
+    });
+    res.json(ticket);
+  } catch (err) {
+    next(err);
+  }
+});
+
+export { router as ticketsRouter };

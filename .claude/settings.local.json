@@ -55,7 +55,28 @@
       "PowerShell(Start-Process -FilePath \"bun\" -ArgumentList \"dev\" -WorkingDirectory \"C:\\\\Users\\\\inyom\\\\Desktop\\\\playground\\\\HelpDesk\" -WindowStyle Normal)",
       "Bash(bun --cwd apps/client run test)",
       "Bash(bunx tsc *)",
-      "Bash(bunx --bun prisma migrate dev --name add_user_soft_delete)"
+      "Bash(bunx --bun prisma migrate dev --name add_user_soft_delete)",
+      "Bash(Select-Object -First 20)",
+      "Bash(Format-Table FullName)",
+      "Bash(ConvertTo-Json)",
+      "Bash(bunx --bun prisma migrate dev --name add_tickets)",
+      "Bash(Start-Sleep -Seconds 4)",
+      "Bash(Invoke-RestMethod -Uri \"http://localhost:3001/api/health\" -Method GET)",
+      "PowerShell(Start-Sleep -Seconds 4; Invoke-RestMethod -Uri \"http://localhost:3001/api/health\" -Method GET)",
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:3001/api/health\" -Method GET)",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:3001/api/health\" -Method GET; $r.StatusCode; $r.Content)",
+      "Bash(pkill -f \"bun run dev\")",
+      "Bash(pkill -f \"bun dev\")",
+      "Bash(dir C:\\\\Users\\\\inyom\\\\Desktop\\\\playground\\\\HelpDesk\\\\apps\\\\server *)",
+      "Bash(pkill -f \"src/index.ts\")",
+      "Bash(pkill -f \"bun\")",
+      "Bash(INBOUND_EMAIL_WEBHOOK_SECRET=test123 bun run --hot src/index.ts)",
+      "Bash(pkill -f \"bun run --hot\")",
+      "Bash(export INBOUND_EMAIL_WEBHOOK_SECRET=dev-webhook-secret-1234)",
+      "Bash(printenv INBOUND_EMAIL_WEBHOOK_SECRET)",
+      "Bash(INBOUND_EMAIL_WEBHOOK_SECRET=dev-webhook-secret-1234 DATABASE_URL=\"postgresql://postgres:postgresql190804@localhost:5432/helpdesk\" BETTER_AUTH_SECRET=5X/lRyQRyPIfS1mUwMsPofpb9XZsmLdxELyG/Bmt59Y= BETTER_AUTH_URL=http://localhost:3001 CLIENT_ORIGIN=http://localhost:5173 bun run src/index.ts)",
+      "Bash(pkill -9 -f \"bun\")",
+      "PowerShell(Stop-Process *)"
     ]
   }
 }
