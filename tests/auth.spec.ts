@@ -1,9 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 
 // ---------------------------------------------------------------------------
-// Storage state file paths — written during the "setup" describe block and
-// read back by later describe blocks so that each role's session is obtained
-// exactly once per run rather than once per test.
+// Storage state file paths — written by playwright/global-setup.ts before
+// any tests run, so they are always available here.
 // ---------------------------------------------------------------------------
 const ADMIN_STATE = "playwright/.auth/admin.json";
 const AGENT_STATE = "playwright/.auth/agent.json";
@@ -28,29 +27,6 @@ async function loginAs(
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL("/");
 }
-
-// ===========================================================================
-// SETUP — obtain and persist storage state for both roles
-// These tests MUST run first (serial order, fullyParallel: false guarantees
-// this) so that subsequent describe blocks can load the saved state files.
-// ===========================================================================
-test.describe("Setup: persist auth state for both roles", () => {
-  // These tests run without any pre-loaded storage state
-  test.use({ storageState: { cookies: [], origins: [] } });
-
-  test("authenticate as admin and save session", async ({ page, context }) => {
-    await loginAs(page, ADMIN.email, ADMIN.password);
-    // Verify we landed on the home page before saving
-    await expect(page).toHaveURL("/");
-    await context.storageState({ path: ADMIN_STATE });
-  });
-
-  test("authenticate as agent and save session", async ({ page, context }) => {
-    await loginAs(page, AGENT.email, AGENT.password);
-    await expect(page).toHaveURL("/");
-    await context.storageState({ path: AGENT_STATE });
-  });
-});
 
 // ===========================================================================
 // LOGIN PAGE — rendering and form validation

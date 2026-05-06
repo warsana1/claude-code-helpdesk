@@ -50,8 +50,9 @@ export function UserForm({ onClose, onSuccess, user }: Props) {
   return (
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
         <input
+          id="name"
           {...register("name")}
           type="text"
           className={inputClass(!!errors.name)}
@@ -61,8 +62,9 @@ export function UserForm({ onClose, onSuccess, user }: Props) {
         {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
         <input
+          id="email"
           {...register("email")}
           type="email"
           className={inputClass(!!errors.email)}
@@ -71,11 +73,12 @@ export function UserForm({ onClose, onSuccess, user }: Props) {
         {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>}
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
           Password
           {isEdit && <span className="text-gray-400 font-normal ml-1">(leave blank to keep unchanged)</span>}
         </label>
         <input
+          id="password"
           {...register("password")}
           type="password"
           className={inputClass(!!errors.password)}
