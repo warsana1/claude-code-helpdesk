@@ -22,6 +22,7 @@ export type TicketSource = (typeof TicketSource)[keyof typeof TicketSource];
 
 export const updateTicketSchema = z.object({
   status: z.enum(["open", "resolved", "closed"]).optional(),
+  category: z.enum(["general_question", "technical_question", "refund_request"]).optional(),
   assigneeId: z.string().nullable().optional(),
 });
 

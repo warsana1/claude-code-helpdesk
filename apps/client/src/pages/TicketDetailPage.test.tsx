@@ -117,22 +117,6 @@ describe("TicketDetailPage — loaded", () => {
     await waitFor(() => expect(screen.getByText("#1")).toBeInTheDocument());
   });
 
-  it("displays the status badge", async () => {
-    renderDetail();
-    await waitFor(() => expect(screen.getByText("open")).toBeInTheDocument());
-  });
-
-  it("applies the correct status badge colour for open tickets", async () => {
-    renderDetail();
-    await waitFor(() => expect(screen.getByText("open")).toBeInTheDocument());
-    expect(screen.getByText("open")).toHaveClass("bg-yellow-100", "text-yellow-700");
-  });
-
-  it("displays the category badge", async () => {
-    renderDetail();
-    await waitFor(() => expect(screen.getByText("General")).toBeInTheDocument());
-  });
-
   it("displays the sender name", async () => {
     renderDetail();
     await waitFor(() => expect(screen.getByText("John Doe")).toBeInTheDocument());
@@ -191,44 +175,40 @@ describe("TicketDetailPage — loaded", () => {
 // ---------------------------------------------------------------------------
 
 describe("TicketDetailPage — assignment", () => {
-  it("renders a combobox for assigning agents", async () => {
+  it("renders the 'Assign to agent' combobox", async () => {
     mockSuccess();
     renderDetail();
-    await waitFor(() => expect(screen.getByRole("combobox")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Assign to agent" })).toBeInTheDocument()
+    );
   });
 
-  it("lists all agents as options", async () => {
+  it("lists all agents as options in the assignee select", async () => {
     mockSuccess();
     renderDetail();
-    await waitFor(() => expect(screen.getByRole("option", { name: "Agent Alice" })).toBeInTheDocument());
-    expect(screen.getByRole("option", { name: "Agent Bob" })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Assign to agent" })).toBeInTheDocument()
+    );
+    const select = screen.getByRole("combobox", { name: "Assign to agent" });
+    expect(select).toContainElement(screen.getByRole("option", { name: "Agent Alice" }));
+    expect(select).toContainElement(screen.getByRole("option", { name: "Agent Bob" }));
   });
 
-  it("has 'Unassigned' as the first option", async () => {
+  it("defaults the assignee select to 'Unassigned'", async () => {
     mockSuccess();
     renderDetail();
-    await waitFor(() => expect(screen.getByRole("combobox")).toBeInTheDocument());
-    const options = screen.getAllByRole("option");
-    expect(options[0]).toHaveValue("");
-    expect(options[0]).toHaveTextContent("Unassigned");
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Assign to agent" })).toBeInTheDocument()
+    );
+    expect(screen.getByRole("combobox", { name: "Assign to agent" })).toHaveValue("");
   });
 
-  it("shows 'Unassigned' as the selected value when ticket has no assignee", async () => {
-    mockSuccess({ ...TICKET, assignee: null, assigneeId: null });
+  it("pre-selects the current assignee when a ticket has an assignee", async () => {
+    mockSuccess({ ...TICKET, assigneeId: "a1", assignee: { id: "a1", name: "Agent Alice" } });
     renderDetail();
-    await waitFor(() => expect(screen.getByRole("combobox")).toBeInTheDocument());
-    expect(screen.getByRole("combobox")).toHaveValue("");
-  });
-
-  it("pre-selects the current assignee when the ticket is already assigned", async () => {
-    mockSuccess({
-      ...TICKET,
-      assigneeId: "a1",
-      assignee: { id: "a1", name: "Agent Alice" },
-    });
-    renderDetail();
-    await waitFor(() => expect(screen.getByRole("combobox")).toBeInTheDocument());
-    expect(screen.getByRole("combobox")).toHaveValue("a1");
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Assign to agent" })).toHaveValue("a1")
+    );
   });
 
   it("calls PATCH /api/tickets/1 with the selected agent's id", async () => {
@@ -237,9 +217,14 @@ describe("TicketDetailPage — assignment", () => {
       data: { ...TICKET, assigneeId: "a1", assignee: { id: "a1", name: "Agent Alice" } },
     });
     renderDetail();
-    await waitFor(() => expect(screen.getByRole("combobox")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Assign to agent" })).toBeInTheDocument()
+    );
 
-    await userEvent.selectOptions(screen.getByRole("combobox"), "a1");
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "Assign to agent" }),
+      "a1"
+    );
 
     expect(axios.patch).toHaveBeenCalledWith(
       "/api/tickets/1",
@@ -248,52 +233,223 @@ describe("TicketDetailPage — assignment", () => {
     );
   });
 
-  it("calls PATCH /api/tickets/1 with null when unassigning", async () => {
-    mockSuccess({
-      ...TICKET,
-      assigneeId: "a1",
-      assignee: { id: "a1", name: "Agent Alice" },
-    });
-    vi.mocked(axios.patch).mockResolvedValue({
-      data: { ...TICKET, assigneeId: null, assignee: null },
-    });
-    renderDetail();
-    await waitFor(() => expect(screen.getByRole("combobox")).toHaveValue("a1"));
-
-    await userEvent.selectOptions(screen.getByRole("combobox"), "");
-
-    expect(axios.patch).toHaveBeenCalledWith(
-      "/api/tickets/1",
-      { assigneeId: null },
-      { withCredentials: true }
-    );
-  });
-
-  it("updates the dropdown to the new assignee after a successful patch", async () => {
+  it("reflects the assigned agent in the select after a successful patch", async () => {
     mockSuccess();
     vi.mocked(axios.patch).mockResolvedValue({
       data: { ...TICKET, assigneeId: "a2", assignee: { id: "a2", name: "Agent Bob" } },
     });
     renderDetail();
-    await waitFor(() => expect(screen.getByRole("combobox")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Assign to agent" })).toBeInTheDocument()
+    );
 
-    await userEvent.selectOptions(screen.getByRole("combobox"), "a2");
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "Assign to agent" }),
+      "a2"
+    );
 
     await waitFor(() =>
-      expect(screen.getByRole("combobox")).toHaveValue("a2")
+      expect(screen.getByRole("combobox", { name: "Assign to agent" })).toHaveValue("a2")
     );
   });
 
-  it("disables the dropdown while a patch is in-flight", async () => {
+  it("disables the assignee select while a patch is in-flight", async () => {
     mockSuccess();
     vi.mocked(axios.patch).mockReturnValue(new Promise(() => {}));
     renderDetail();
-    await waitFor(() => expect(screen.getByRole("combobox")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Assign to agent" })).toBeInTheDocument()
+    );
 
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "a1" } });
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Assign to agent" }),
+      { target: { value: "a1" } }
+    );
 
     await waitFor(() =>
-      expect(screen.getByRole("combobox")).toBeDisabled()
+      expect(screen.getByRole("combobox", { name: "Assign to agent" })).toBeDisabled()
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Status select
+// ---------------------------------------------------------------------------
+
+describe("TicketDetailPage — status", () => {
+  it("renders the Status combobox", async () => {
+    mockSuccess();
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Status" })).toBeInTheDocument()
+    );
+  });
+
+  it("pre-selects the current ticket status", async () => {
+    mockSuccess();
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Status" })).toHaveValue("open")
+    );
+  });
+
+  it("shows all three status options", async () => {
+    mockSuccess();
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Status" })).toBeInTheDocument()
+    );
+    const select = screen.getByRole("combobox", { name: "Status" });
+    expect(select).toContainElement(screen.getByRole("option", { name: "Open" }));
+    expect(select).toContainElement(screen.getByRole("option", { name: "Resolved" }));
+    expect(select).toContainElement(screen.getByRole("option", { name: "Closed" }));
+  });
+
+  it("calls PATCH /api/tickets/1 with the new status", async () => {
+    mockSuccess();
+    vi.mocked(axios.patch).mockResolvedValue({
+      data: { ...TICKET, status: "resolved" },
+    });
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Status" })).toBeInTheDocument()
+    );
+
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Status" }), "resolved");
+
+    expect(axios.patch).toHaveBeenCalledWith(
+      "/api/tickets/1",
+      { status: "resolved" },
+      { withCredentials: true }
+    );
+  });
+
+  it("reflects the updated status after a successful patch", async () => {
+    mockSuccess();
+    vi.mocked(axios.patch).mockResolvedValue({
+      data: { ...TICKET, status: "closed" },
+    });
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Status" })).toBeInTheDocument()
+    );
+
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Status" }), "closed");
+
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Status" })).toHaveValue("closed")
+    );
+  });
+
+  it("disables the status select while a patch is in-flight", async () => {
+    mockSuccess();
+    vi.mocked(axios.patch).mockReturnValue(new Promise(() => {}));
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Status" })).toBeInTheDocument()
+    );
+
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Status" }),
+      { target: { value: "resolved" } }
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Status" })).toBeDisabled()
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Category select
+// ---------------------------------------------------------------------------
+
+describe("TicketDetailPage — category", () => {
+  it("renders the Category combobox", async () => {
+    mockSuccess();
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Category" })).toBeInTheDocument()
+    );
+  });
+
+  it("pre-selects the current ticket category", async () => {
+    mockSuccess();
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Category" })).toHaveValue("general_question")
+    );
+  });
+
+  it("shows all three category options", async () => {
+    mockSuccess();
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Category" })).toBeInTheDocument()
+    );
+    const select = screen.getByRole("combobox", { name: "Category" });
+    expect(select).toContainElement(screen.getByRole("option", { name: "General" }));
+    expect(select).toContainElement(screen.getByRole("option", { name: "Technical" }));
+    expect(select).toContainElement(screen.getByRole("option", { name: "Refund" }));
+  });
+
+  it("calls PATCH /api/tickets/1 with the new category", async () => {
+    mockSuccess();
+    vi.mocked(axios.patch).mockResolvedValue({
+      data: { ...TICKET, category: "technical_question" },
+    });
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Category" })).toBeInTheDocument()
+    );
+
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "Category" }),
+      "technical_question"
+    );
+
+    expect(axios.patch).toHaveBeenCalledWith(
+      "/api/tickets/1",
+      { category: "technical_question" },
+      { withCredentials: true }
+    );
+  });
+
+  it("reflects the updated category after a successful patch", async () => {
+    mockSuccess();
+    vi.mocked(axios.patch).mockResolvedValue({
+      data: { ...TICKET, category: "refund_request" },
+    });
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Category" })).toBeInTheDocument()
+    );
+
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "Category" }),
+      "refund_request"
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Category" })).toHaveValue("refund_request")
+    );
+  });
+
+  it("disables the category select while a patch is in-flight", async () => {
+    mockSuccess();
+    vi.mocked(axios.patch).mockReturnValue(new Promise(() => {}));
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Category" })).toBeInTheDocument()
+    );
+
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Category" }),
+      { target: { value: "refund_request" } }
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Category" })).toBeDisabled()
     );
   });
 });

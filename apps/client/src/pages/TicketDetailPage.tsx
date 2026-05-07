@@ -37,26 +37,20 @@ async function fetchAgents(): Promise<Agent[]> {
   return data;
 }
 
-async function updateAssignee(ticketId: number, assigneeId: string | null): Promise<TicketDetail> {
+async function patchTicket(
+  ticketId: number,
+  patch: { status?: TicketStatus; category?: TicketCategory; assigneeId?: string | null },
+): Promise<TicketDetail> {
   const { data } = await axios.patch<TicketDetail>(
     `/api/tickets/${ticketId}`,
-    { assigneeId },
+    patch,
     { withCredentials: true },
   );
   return data;
 }
 
-const categoryLabel: Record<TicketCategory, string> = {
-  [TicketCategory.general_question]: "General",
-  [TicketCategory.technical_question]: "Technical",
-  [TicketCategory.refund_request]: "Refund",
-};
-
-const statusStyles: Record<TicketStatus, string> = {
-  [TicketStatus.open]: "bg-yellow-100 text-yellow-700",
-  [TicketStatus.resolved]: "bg-green-100 text-green-700",
-  [TicketStatus.closed]: "bg-gray-100 text-gray-600",
-};
+const selectClass =
+  "w-full px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-60";
 
 export function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -74,17 +68,25 @@ export function TicketDetailPage() {
     queryFn: fetchAgents,
   });
 
+  const { mutate: updateStatus, isPending: isUpdatingStatus } = useMutation({
+    mutationFn: (status: TicketStatus) => patchTicket(ticketId, { status }),
+    onSuccess: (updated) => queryClient.setQueryData(["ticket", ticketId], updated),
+  });
+
+  const { mutate: updateCategory, isPending: isUpdatingCategory } = useMutation({
+    mutationFn: (category: TicketCategory) => patchTicket(ticketId, { category }),
+    onSuccess: (updated) => queryClient.setQueryData(["ticket", ticketId], updated),
+  });
+
   const { mutate: assignAgent, isPending: isAssigning } = useMutation({
-    mutationFn: (assigneeId: string | null) => updateAssignee(ticketId, assigneeId),
-    onSuccess: (updated) => {
-      queryClient.setQueryData(["ticket", ticketId], updated);
-    },
+    mutationFn: (assigneeId: string | null) => patchTicket(ticketId, { assigneeId }),
+    onSuccess: (updated) => queryClient.setQueryData(["ticket", ticketId], updated),
   });
 
   return (
     <div className="min-h-screen bg-gray-50">
       <NavBar />
-      <div className="max-w-3xl mx-auto px-4 py-10">
+      <div className="max-w-5xl mx-auto px-4 py-10">
         <Link
           to="/tickets"
           className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6"
@@ -124,58 +126,86 @@ export function TicketDetailPage() {
                   #{ticket.id}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-2 mt-3">
-                <span
-                  className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusStyles[ticket.status]}`}
-                >
-                  {ticket.status}
-                </span>
-                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                  {categoryLabel[ticket.category]}
-                </span>
-              </div>
             </div>
 
-            <div className="p-6 grid grid-cols-2 gap-x-8 gap-y-4 text-sm border-b border-gray-100">
-              <div>
-                <p className="text-gray-400 text-xs uppercase tracking-wide mb-0.5">From</p>
-                <p className="font-medium text-gray-800">{ticket.fromName}</p>
-                <p className="text-gray-500">{ticket.fromEmail}</p>
-              </div>
-              <div>
-                <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Assigned to</p>
-                <select
-                  value={ticket.assignee?.id ?? ""}
-                  disabled={isAssigning}
-                  onChange={(e) => assignAgent(e.target.value || null)}
-                  className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-60"
-                >
-                  <option value="">Unassigned</option>
-                  {agents.map((agent) => (
-                    <option key={agent.id} value={agent.id}>
-                      {agent.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <p className="text-gray-400 text-xs uppercase tracking-wide mb-0.5">Created</p>
-                <p className="text-gray-700">
-                  {new Date(ticket.createdAt).toLocaleString()}
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-400 text-xs uppercase tracking-wide mb-0.5">Last updated</p>
-                <p className="text-gray-700">
-                  {new Date(ticket.updatedAt).toLocaleString()}
-                </p>
-              </div>
-            </div>
+            <div className="grid grid-cols-[1fr_260px] divide-x divide-gray-100">
+              {/* Left column: info + message */}
+              <div className="p-6 space-y-6 text-sm">
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-gray-400 text-xs uppercase tracking-wide mb-0.5">From</p>
+                    <p className="font-medium text-gray-800">{ticket.fromName}</p>
+                    <p className="text-gray-500">{ticket.fromEmail}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-gray-400 text-xs uppercase tracking-wide mb-0.5">Created</p>
+                      <p className="text-gray-700">{new Date(ticket.createdAt).toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-xs uppercase tracking-wide mb-0.5">Last updated</p>
+                      <p className="text-gray-700">{new Date(ticket.updatedAt).toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
 
-            <div className="p-6">
-              <p className="text-gray-400 text-xs uppercase tracking-wide mb-3">Message</p>
-              <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                {ticket.body || <span className="text-gray-400 italic">No message body.</span>}
+                <div>
+                  <p className="text-gray-400 text-xs uppercase tracking-wide mb-3">Message</p>
+                  <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    {ticket.body || <span className="text-gray-400 italic">No message body.</span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right column: dropdowns */}
+              <div className="p-6 space-y-4 text-sm">
+                <div>
+                  <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Assigned to</p>
+                  <select
+                    aria-label="Assign to agent"
+                    value={ticket.assignee?.id ?? ""}
+                    disabled={isAssigning}
+                    onChange={(e) => assignAgent(e.target.value || null)}
+                    className={selectClass}
+                  >
+                    <option value="">Unassigned</option>
+                    {agents.map((agent) => (
+                      <option key={agent.id} value={agent.id}>
+                        {agent.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Status</p>
+                  <select
+                    aria-label="Status"
+                    value={ticket.status}
+                    disabled={isUpdatingStatus}
+                    onChange={(e) => updateStatus(e.target.value as TicketStatus)}
+                    className={selectClass}
+                  >
+                    <option value={TicketStatus.open}>Open</option>
+                    <option value={TicketStatus.resolved}>Resolved</option>
+                    <option value={TicketStatus.closed}>Closed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Category</p>
+                  <select
+                    aria-label="Category"
+                    value={ticket.category}
+                    disabled={isUpdatingCategory}
+                    onChange={(e) => updateCategory(e.target.value as TicketCategory)}
+                    className={selectClass}
+                  >
+                    <option value={TicketCategory.general_question}>General</option>
+                    <option value={TicketCategory.technical_question}>Technical</option>
+                    <option value={TicketCategory.refund_request}>Refund</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
