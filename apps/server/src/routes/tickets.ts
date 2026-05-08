@@ -152,6 +152,53 @@ router.post("/:id/replies", async (req, res, next) => {
   }
 });
 
+router.post("/:id/summarize", async (req, res, next) => {
+  const ticketId = Number(req.params.id);
+  const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+  if (!ticket) return res.status(404).json({ error: "Ticket not found." });
+
+  const replies = await prisma.reply.findMany({
+    where: { ticketId },
+    select: {
+      body: true,
+      senderType: true,
+      user: { select: { name: true } },
+      createdAt: true,
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const lines = [
+    `Customer: ${ticket.fromName} <${ticket.fromEmail}>`,
+    `Subject: ${ticket.subject}`,
+    `Status: ${ticket.status}`,
+    `Category: ${ticket.category}`,
+    `\nOriginal Message:\n${ticket.body || "(no body)"}`,
+  ];
+
+  if (replies.length > 0) {
+    lines.push("\nConversation History:");
+    for (const reply of replies) {
+      const sender =
+        reply.senderType === "agent" ? (reply.user?.name ?? "Agent") : ticket.fromName;
+      lines.push(`[${reply.senderType.toUpperCase()}] ${sender}: ${reply.body}`);
+    }
+  }
+
+  try {
+    const { text } = await generateText({
+      model: openai("gpt-5-nano"),
+      system:
+        "You are a customer support analyst. Summarize the support ticket and conversation concisely. Include: the customer's issue, key exchanges, current status, and any resolution or next steps.",
+      prompt: lines.join("\n"),
+    });
+
+    res.json({ summary: text });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post("/:id/polish-reply", async (req, res, next) => {
   const result = createReplySchema.safeParse(req.body);
   if (!result.success)

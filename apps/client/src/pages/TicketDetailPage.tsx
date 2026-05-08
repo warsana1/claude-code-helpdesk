@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, Link } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles, ScrollText } from "lucide-react";
 import { TicketStatus, TicketCategory, TicketSource, SenderType, type ReplyItem } from "@helpdesk/core";
 import { NavBar } from "../components/NavBar";
 
@@ -43,6 +43,15 @@ async function fetchReplies(ticketId: number): Promise<ReplyItem[]> {
     withCredentials: true,
   });
   return data;
+}
+
+async function summarizeTicket(ticketId: number): Promise<string> {
+  const { data } = await axios.post<{ summary: string }>(
+    `/api/tickets/${ticketId}/summarize`,
+    {},
+    { withCredentials: true },
+  );
+  return data.summary;
 }
 
 async function polishReply(ticketId: number, body: string): Promise<string> {
@@ -111,6 +120,8 @@ export function TicketDetailPage() {
 
   const [replyBody, setReplyBody] = useState("");
   const [polishError, setPolishError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
 
   const { data: replies = [] } = useQuery({
     queryKey: ["replies", ticketId],
@@ -126,6 +137,20 @@ export function TicketDetailPage() {
         newReply,
       ]);
       setReplyBody("");
+    },
+  });
+
+  const { mutate: runSummarize, isPending: isSummarizing } = useMutation({
+    mutationFn: () => summarizeTicket(ticketId),
+    onSuccess: (text) => {
+      setSummary(text);
+      setSummaryError(null);
+    },
+    onError: (err: unknown) => {
+      const msg = axios.isAxiosError(err)
+        ? (err.response?.data as { error?: string })?.error ?? err.message
+        : "Failed to generate summary.";
+      setSummaryError(msg);
     },
   });
 
@@ -214,6 +239,25 @@ export function TicketDetailPage() {
                   <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                     {ticket.body || <span className="text-gray-400 italic">No message body.</span>}
                   </div>
+                  <div className="mt-3">
+                    <button
+                      onClick={() => runSummarize()}
+                      disabled={isSummarizing}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ScrollText size={13} />
+                      {isSummarizing ? "Summarizing…" : "Summarize"}
+                    </button>
+                  </div>
+                  {summaryError && (
+                    <p className="text-xs text-red-500 mt-2">{summaryError}</p>
+                  )}
+                  {summary && !isSummarizing && (
+                    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                      <p className="text-xs font-medium text-amber-700 uppercase tracking-wide mb-1.5">Summary</p>
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{summary}</p>
+                    </div>
+                  )}
                 </div>
 
                 {replies.length > 0 && (

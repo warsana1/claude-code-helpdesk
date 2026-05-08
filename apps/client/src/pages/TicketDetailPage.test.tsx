@@ -60,7 +60,7 @@ const REPLY_CUSTOMER = {
   user: null,
 };
 
-function mockSuccess(ticket = TICKET, agents = AGENTS, replies: typeof REPLY_AGENT[] = []) {
+function mockSuccess(ticket = TICKET, agents = AGENTS, replies: Array<typeof REPLY_AGENT | typeof REPLY_CUSTOMER> = []) {
   vi.mocked(axios.get).mockImplementation((url: string) => {
     if (url === "/api/tickets/1") return Promise.resolve({ data: ticket });
     if (url === "/api/users/agents") return Promise.resolve({ data: agents });
