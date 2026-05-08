@@ -656,3 +656,118 @@ describe("TicketDetailPage — reply form", () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// Polish reply
+// ---------------------------------------------------------------------------
+
+describe("TicketDetailPage — polish reply", () => {
+  beforeEach(() => mockSuccess());
+
+  it("renders the Polish button", async () => {
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Polish" })).toBeInTheDocument()
+    );
+  });
+
+  it("'Polish' is disabled when the textarea is empty", async () => {
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Polish" })).toBeDisabled()
+    );
+  });
+
+  it("'Polish' is enabled once the textarea has text", async () => {
+    renderDetail();
+    await waitFor(() => expect(screen.getByLabelText("Reply body")).toBeInTheDocument());
+    await userEvent.type(screen.getByLabelText("Reply body"), "rough draft");
+    expect(screen.getByRole("button", { name: "Polish" })).not.toBeDisabled();
+  });
+
+  it("calls POST /api/tickets/1/polish-reply with the trimmed reply body", async () => {
+    vi.mocked(axios.post).mockResolvedValue({ data: { polishedBody: "Polished text." } });
+    renderDetail();
+    await waitFor(() => expect(screen.getByLabelText("Reply body")).toBeInTheDocument());
+
+    await userEvent.type(screen.getByLabelText("Reply body"), "  rough draft  ");
+    await userEvent.click(screen.getByRole("button", { name: "Polish" }));
+
+    expect(axios.post).toHaveBeenCalledWith(
+      "/api/tickets/1/polish-reply",
+      { body: "rough draft" },
+      { withCredentials: true }
+    );
+  });
+
+  it("replaces the textarea content with the polished body on success", async () => {
+    vi.mocked(axios.post).mockResolvedValue({ data: { polishedBody: "Polished text." } });
+    renderDetail();
+    await waitFor(() => expect(screen.getByLabelText("Reply body")).toBeInTheDocument());
+
+    await userEvent.type(screen.getByLabelText("Reply body"), "rough draft");
+    await userEvent.click(screen.getByRole("button", { name: "Polish" }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Reply body")).toHaveValue("Polished text.")
+    );
+  });
+
+  it("shows 'Polishing…' and disables the button while the request is in-flight", async () => {
+    vi.mocked(axios.post).mockReturnValue(new Promise(() => {}));
+    renderDetail();
+    await waitFor(() => expect(screen.getByLabelText("Reply body")).toBeInTheDocument());
+
+    await userEvent.type(screen.getByLabelText("Reply body"), "rough draft");
+    await userEvent.click(screen.getByRole("button", { name: "Polish" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Polishing…" })).toBeDisabled()
+    );
+  });
+
+  it("disables 'Send reply' while polishing is in-flight", async () => {
+    vi.mocked(axios.post).mockReturnValue(new Promise(() => {}));
+    renderDetail();
+    await waitFor(() => expect(screen.getByLabelText("Reply body")).toBeInTheDocument());
+
+    await userEvent.type(screen.getByLabelText("Reply body"), "rough draft");
+    await userEvent.click(screen.getByRole("button", { name: "Polish" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Send reply" })).toBeDisabled()
+    );
+  });
+
+  it("shows an error message when polishing fails", async () => {
+    const axiosError = { isAxiosError: true, response: { data: { error: "AI service unavailable." } }, message: "Request failed" };
+    vi.mocked(axios.post).mockRejectedValue(axiosError);
+    vi.mocked(axios.isAxiosError).mockReturnValue(true);
+    renderDetail();
+    await waitFor(() => expect(screen.getByLabelText("Reply body")).toBeInTheDocument());
+
+    await userEvent.type(screen.getByLabelText("Reply body"), "rough draft");
+    await userEvent.click(screen.getByRole("button", { name: "Polish" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("AI service unavailable.")).toBeInTheDocument()
+    );
+  });
+
+  it("clears the error when the user edits the textarea", async () => {
+    const axiosError = { isAxiosError: true, response: { data: { error: "AI service unavailable." } }, message: "Request failed" };
+    vi.mocked(axios.post).mockRejectedValue(axiosError);
+    vi.mocked(axios.isAxiosError).mockReturnValue(true);
+    renderDetail();
+    await waitFor(() => expect(screen.getByLabelText("Reply body")).toBeInTheDocument());
+
+    await userEvent.type(screen.getByLabelText("Reply body"), "rough draft");
+    await userEvent.click(screen.getByRole("button", { name: "Polish" }));
+    await waitFor(() =>
+      expect(screen.getByText("AI service unavailable.")).toBeInTheDocument()
+    );
+
+    await userEvent.type(screen.getByLabelText("Reply body"), " more text");
+    expect(screen.queryByText("AI service unavailable.")).not.toBeInTheDocument();
+  });
+});
