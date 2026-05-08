@@ -1,7 +1,13 @@
 import { Router } from "express";
-import { updateTicketSchema, ticketSortSchema, createReplySchema } from "@helpdesk/core";
+import {
+  updateTicketSchema,
+  ticketSortSchema,
+  createReplySchema,
+} from "@helpdesk/core";
 import { SenderType } from "../generated/prisma";
 import { prisma } from "../db";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
 
 const router = Router();
 
@@ -27,13 +33,15 @@ router.get("/", async (req, res) => {
   const where = {
     ...(category ? { category } : {}),
     ...(status ? { status } : {}),
-    ...(search ? {
-      OR: [
-        { subject:   { contains: search, mode: "insensitive" as const } },
-        { fromName:  { contains: search, mode: "insensitive" as const } },
-        { fromEmail: { contains: search, mode: "insensitive" as const } },
-      ],
-    } : {}),
+    ...(search
+      ? {
+          OR: [
+            { subject: { contains: search, mode: "insensitive" as const } },
+            { fromName: { contains: search, mode: "insensitive" as const } },
+            { fromEmail: { contains: search, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
   };
 
   const [tickets, total] = await prisma.$transaction([
@@ -139,6 +147,31 @@ router.post("/:id/replies", async (req, res, next) => {
       },
     });
     res.status(201).json(reply);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/:id/polish-reply", async (req, res, next) => {
+  const result = createReplySchema.safeParse(req.body);
+  if (!result.success)
+    return res.status(400).json({ error: firstIssue(result) });
+
+  const ticketId = Number(req.params.id);
+  const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+  if (!ticket) return res.status(404).json({ error: "Ticket not found." });
+
+  const agentName = res.locals.session.user.name as string;
+
+  try {
+    const { text } = await generateText({
+      model: openai("gpt-5-nano"),
+      system:
+        `You are a customer support specialist. Polish the agent's draft reply to be professional, clear, and empathetic. Preserve the original meaning. Begin the reply by addressing the customer by their first name: ${ticket.fromName}. Return only the improved reply text with no extra commentary. Do not include any sign-off or signature.`,
+      prompt: result.data.body,
+    });
+
+    res.json({ polishedBody: `${text}\n\nBest regards,\n${agentName}` });
   } catch (err) {
     next(err);
   }

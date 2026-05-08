@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, Link } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import { TicketStatus, TicketCategory, TicketSource, SenderType, type ReplyItem } from "@helpdesk/core";
 import { NavBar } from "../components/NavBar";
 
@@ -43,6 +43,15 @@ async function fetchReplies(ticketId: number): Promise<ReplyItem[]> {
     withCredentials: true,
   });
   return data;
+}
+
+async function polishReply(ticketId: number, body: string): Promise<string> {
+  const { data } = await axios.post<{ polishedBody: string }>(
+    `/api/tickets/${ticketId}/polish-reply`,
+    { body },
+    { withCredentials: true },
+  );
+  return data.polishedBody;
 }
 
 async function postReply(ticketId: number, body: string): Promise<ReplyItem> {
@@ -101,6 +110,7 @@ export function TicketDetailPage() {
   });
 
   const [replyBody, setReplyBody] = useState("");
+  const [polishError, setPolishError] = useState<string | null>(null);
 
   const { data: replies = [] } = useQuery({
     queryKey: ["replies", ticketId],
@@ -116,6 +126,20 @@ export function TicketDetailPage() {
         newReply,
       ]);
       setReplyBody("");
+    },
+  });
+
+  const { mutate: runPolish, isPending: isPolishing } = useMutation({
+    mutationFn: (body: string) => polishReply(ticketId, body),
+    onSuccess: (polished) => {
+      setReplyBody(polished);
+      setPolishError(null);
+    },
+    onError: (err: unknown) => {
+      const msg = axios.isAxiosError(err)
+        ? (err.response?.data as { error?: string })?.error ?? err.message
+        : "Failed to polish reply.";
+      setPolishError(msg);
     },
   });
 
@@ -247,19 +271,33 @@ export function TicketDetailPage() {
                   <textarea
                     aria-label="Reply body"
                     value={replyBody}
-                    onChange={(e) => setReplyBody(e.target.value)}
+                    onChange={(e) => { setReplyBody(e.target.value); setPolishError(null); }}
                     placeholder="Write a reply…"
                     rows={4}
                     disabled={isSubmittingReply}
                     className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none disabled:opacity-60"
                   />
-                  <div className="flex justify-end mt-2">
+                  {polishError && (
+                    <p className="text-xs text-red-500 mt-1">{polishError}</p>
+                  )}
+                  <div className="flex justify-end gap-2 mt-2">
+                    <button
+                      onClick={() => {
+                        const trimmed = replyBody.trim();
+                        if (trimmed) runPolish(trimmed);
+                      }}
+                      disabled={isPolishing || isSubmittingReply || replyBody.trim().length === 0}
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <Sparkles size={14} />
+                      {isPolishing ? "Polishing…" : "Polish"}
+                    </button>
                     <button
                       onClick={() => {
                         const trimmed = replyBody.trim();
                         if (trimmed) submitReply(trimmed);
                       }}
-                      disabled={isSubmittingReply || replyBody.trim().length === 0}
+                      disabled={isSubmittingReply || isPolishing || replyBody.trim().length === 0}
                       className="px-4 py-1.5 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       {isSubmittingReply ? "Sending…" : "Send reply"}
