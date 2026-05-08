@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { ArrowLeft } from "lucide-react";
-import { TicketStatus, TicketCategory, TicketSource } from "@helpdesk/core";
+import { TicketStatus, TicketCategory, TicketSource, SenderType, type ReplyItem } from "@helpdesk/core";
 import { NavBar } from "../components/NavBar";
 
 type TicketDetail = {
@@ -34,6 +35,22 @@ async function fetchAgents(): Promise<Agent[]> {
   const { data } = await axios.get<Agent[]>("/api/users/agents", {
     withCredentials: true,
   });
+  return data;
+}
+
+async function fetchReplies(ticketId: number): Promise<ReplyItem[]> {
+  const { data } = await axios.get<ReplyItem[]>(`/api/tickets/${ticketId}/replies`, {
+    withCredentials: true,
+  });
+  return data;
+}
+
+async function postReply(ticketId: number, body: string): Promise<ReplyItem> {
+  const { data } = await axios.post<ReplyItem>(
+    `/api/tickets/${ticketId}/replies`,
+    { body },
+    { withCredentials: true },
+  );
   return data;
 }
 
@@ -81,6 +98,25 @@ export function TicketDetailPage() {
   const { mutate: assignAgent, isPending: isAssigning } = useMutation({
     mutationFn: (assigneeId: string | null) => patchTicket(ticketId, { assigneeId }),
     onSuccess: (updated) => queryClient.setQueryData(["ticket", ticketId], updated),
+  });
+
+  const [replyBody, setReplyBody] = useState("");
+
+  const { data: replies = [] } = useQuery({
+    queryKey: ["replies", ticketId],
+    queryFn: () => fetchReplies(ticketId),
+    enabled: !isNaN(ticketId),
+  });
+
+  const { mutate: submitReply, isPending: isSubmittingReply } = useMutation({
+    mutationFn: (body: string) => postReply(ticketId, body),
+    onSuccess: (newReply) => {
+      queryClient.setQueryData<ReplyItem[]>(["replies", ticketId], (prev = []) => [
+        ...prev,
+        newReply,
+      ]);
+      setReplyBody("");
+    },
   });
 
   return (
@@ -153,6 +189,74 @@ export function TicketDetailPage() {
                   <p className="text-gray-400 text-xs uppercase tracking-wide mb-3">Message</p>
                   <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                     {ticket.body || <span className="text-gray-400 italic">No message body.</span>}
+                  </div>
+                </div>
+
+                {replies.length > 0 && (
+                  <div>
+                    <p className="text-gray-400 text-xs uppercase tracking-wide mb-3">
+                      Replies ({replies.length})
+                    </p>
+                    <div className="space-y-3">
+                      {replies.map((reply) => (
+                        <div
+                          key={reply.id}
+                          className={`rounded-lg p-3 text-sm ${
+                            reply.senderType === SenderType.agent
+                              ? "bg-blue-50 border border-blue-100"
+                              : "bg-gray-50 border border-gray-100"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="font-medium text-gray-800">
+                              {reply.senderType === SenderType.agent
+                                ? (reply.user?.name ?? "Agent")
+                                : ticket.fromName}
+                            </span>
+                            <span
+                              className={`inline-flex px-1.5 py-0.5 rounded-full text-xs font-medium ${
+                                reply.senderType === SenderType.agent
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-gray-200 text-gray-600"
+                              }`}
+                            >
+                              {reply.senderType}
+                            </span>
+                            <span className="ml-auto text-gray-400 text-xs">
+                              {new Date(reply.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                            {reply.body}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-gray-400 text-xs uppercase tracking-wide mb-2">Reply</p>
+                  <textarea
+                    aria-label="Reply body"
+                    value={replyBody}
+                    onChange={(e) => setReplyBody(e.target.value)}
+                    placeholder="Write a reply…"
+                    rows={4}
+                    disabled={isSubmittingReply}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none disabled:opacity-60"
+                  />
+                  <div className="flex justify-end mt-2">
+                    <button
+                      onClick={() => {
+                        const trimmed = replyBody.trim();
+                        if (trimmed) submitReply(trimmed);
+                      }}
+                      disabled={isSubmittingReply || replyBody.trim().length === 0}
+                      className="px-4 py-1.5 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isSubmittingReply ? "Sending…" : "Send reply"}
+                    </button>
                   </div>
                 </div>
               </div>

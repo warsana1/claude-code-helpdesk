@@ -44,10 +44,27 @@ const AGENTS = [
   { id: "a2", name: "Agent Bob" },
 ];
 
-function mockSuccess(ticket = TICKET, agents = AGENTS) {
+const REPLY_AGENT = {
+  id: 10,
+  body: "We're looking into this now.",
+  senderType: "agent" as const,
+  createdAt: "2024-03-01T13:00:00.000Z",
+  user: { id: "a1", name: "Agent Alice" },
+};
+
+const REPLY_CUSTOMER = {
+  id: 11,
+  body: "Still not working, please help.",
+  senderType: "customer" as const,
+  createdAt: "2024-03-01T14:00:00.000Z",
+  user: null,
+};
+
+function mockSuccess(ticket = TICKET, agents = AGENTS, replies: typeof REPLY_AGENT[] = []) {
   vi.mocked(axios.get).mockImplementation((url: string) => {
     if (url === "/api/tickets/1") return Promise.resolve({ data: ticket });
     if (url === "/api/users/agents") return Promise.resolve({ data: agents });
+    if (url === "/api/tickets/1/replies") return Promise.resolve({ data: replies });
     return Promise.reject(new Error(`Unexpected GET ${url}`));
   });
 }
@@ -450,6 +467,192 @@ describe("TicketDetailPage — category", () => {
 
     await waitFor(() =>
       expect(screen.getByRole("combobox", { name: "Category" })).toBeDisabled()
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reply thread
+// ---------------------------------------------------------------------------
+
+describe("TicketDetailPage — reply thread", () => {
+  it("calls GET /api/tickets/1/replies with credentials", async () => {
+    mockSuccess();
+    renderDetail();
+    await waitFor(() => expect(screen.getByText("John Doe")).toBeInTheDocument());
+    expect(axios.get).toHaveBeenCalledWith("/api/tickets/1/replies", { withCredentials: true });
+  });
+
+  it("does not show a Replies heading when there are no replies", async () => {
+    mockSuccess(TICKET, AGENTS, []);
+    renderDetail();
+    await waitFor(() => expect(screen.getByText("John Doe")).toBeInTheDocument());
+    expect(screen.queryByText(/^Replies/)).not.toBeInTheDocument();
+  });
+
+  it("shows the Replies heading with count when replies exist", async () => {
+    mockSuccess(TICKET, AGENTS, [REPLY_AGENT, REPLY_CUSTOMER]);
+    renderDetail();
+    await waitFor(() => expect(screen.getByText("Replies (2)")).toBeInTheDocument());
+  });
+
+  it("renders an agent reply body", async () => {
+    mockSuccess(TICKET, AGENTS, [REPLY_AGENT]);
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByText("We're looking into this now.")).toBeInTheDocument()
+    );
+  });
+
+  it("shows the agent's name on an agent reply", async () => {
+    mockSuccess(TICKET, AGENTS, [REPLY_AGENT]);
+    renderDetail();
+    await waitFor(() => expect(screen.getByText("Replies (1)")).toBeInTheDocument());
+    expect(screen.getAllByText("Agent Alice").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows an 'agent' badge on agent replies", async () => {
+    mockSuccess(TICKET, AGENTS, [REPLY_AGENT]);
+    renderDetail();
+    await waitFor(() => expect(screen.getByText("Replies (1)")).toBeInTheDocument());
+    expect(screen.getByText("agent")).toBeInTheDocument();
+  });
+
+  it("renders a customer reply body", async () => {
+    mockSuccess(TICKET, AGENTS, [REPLY_CUSTOMER]);
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByText("Still not working, please help.")).toBeInTheDocument()
+    );
+  });
+
+  it("shows the ticket sender name on customer replies", async () => {
+    mockSuccess(TICKET, AGENTS, [REPLY_CUSTOMER]);
+    renderDetail();
+    await waitFor(() => expect(screen.getByText("Replies (1)")).toBeInTheDocument());
+    const customerNames = screen.getAllByText("John Doe");
+    expect(customerNames.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows a 'customer' badge on customer replies", async () => {
+    mockSuccess(TICKET, AGENTS, [REPLY_CUSTOMER]);
+    renderDetail();
+    await waitFor(() => expect(screen.getByText("customer")).toBeInTheDocument());
+  });
+
+  it("renders multiple replies in order", async () => {
+    mockSuccess(TICKET, AGENTS, [REPLY_AGENT, REPLY_CUSTOMER]);
+    renderDetail();
+    await waitFor(() => expect(screen.getByText("Replies (2)")).toBeInTheDocument());
+    const bodies = screen.getAllByText(/looking into|not working/);
+    expect(bodies[0]).toHaveTextContent("We're looking into this now.");
+    expect(bodies[1]).toHaveTextContent("Still not working, please help.");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reply form
+// ---------------------------------------------------------------------------
+
+describe("TicketDetailPage — reply form", () => {
+  beforeEach(() => mockSuccess());
+
+  it("renders the Reply textarea", async () => {
+    renderDetail();
+    await waitFor(() => expect(screen.getByLabelText("Reply body")).toBeInTheDocument());
+  });
+
+  it("renders the Send reply button", async () => {
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Send reply" })).toBeInTheDocument()
+    );
+  });
+
+  it("'Send reply' is disabled when the textarea is empty", async () => {
+    renderDetail();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Send reply" })).toBeDisabled()
+    );
+  });
+
+  it("'Send reply' is enabled once the textarea has text", async () => {
+    renderDetail();
+    await waitFor(() => expect(screen.getByLabelText("Reply body")).toBeInTheDocument());
+    await userEvent.type(screen.getByLabelText("Reply body"), "Hello there");
+    expect(screen.getByRole("button", { name: "Send reply" })).not.toBeDisabled();
+  });
+
+  it("calls POST /api/tickets/1/replies with the trimmed body", async () => {
+    mockSuccess();
+    vi.mocked(axios.post).mockResolvedValue({ data: REPLY_AGENT });
+    renderDetail();
+    await waitFor(() => expect(screen.getByLabelText("Reply body")).toBeInTheDocument());
+
+    await userEvent.type(screen.getByLabelText("Reply body"), "  Hello there  ");
+    await userEvent.click(screen.getByRole("button", { name: "Send reply" }));
+
+    expect(axios.post).toHaveBeenCalledWith(
+      "/api/tickets/1/replies",
+      { body: "Hello there" },
+      { withCredentials: true }
+    );
+  });
+
+  it("clears the textarea after a successful submission", async () => {
+    mockSuccess();
+    vi.mocked(axios.post).mockResolvedValue({ data: REPLY_AGENT });
+    renderDetail();
+    await waitFor(() => expect(screen.getByLabelText("Reply body")).toBeInTheDocument());
+
+    await userEvent.type(screen.getByLabelText("Reply body"), "Hello there");
+    await userEvent.click(screen.getByRole("button", { name: "Send reply" }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Reply body")).toHaveValue("")
+    );
+  });
+
+  it("appends the new reply to the thread without a re-fetch", async () => {
+    mockSuccess();
+    vi.mocked(axios.post).mockResolvedValue({ data: REPLY_AGENT });
+    renderDetail();
+    await waitFor(() => expect(screen.getByLabelText("Reply body")).toBeInTheDocument());
+
+    await userEvent.type(screen.getByLabelText("Reply body"), "New reply");
+    await userEvent.click(screen.getByRole("button", { name: "Send reply" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("We're looking into this now.")).toBeInTheDocument()
+    );
+    expect(screen.getByText("Replies (1)")).toBeInTheDocument();
+  });
+
+  it("shows 'Sending…' and disables the button while the post is in-flight", async () => {
+    mockSuccess();
+    vi.mocked(axios.post).mockReturnValue(new Promise(() => {}));
+    renderDetail();
+    await waitFor(() => expect(screen.getByLabelText("Reply body")).toBeInTheDocument());
+
+    await userEvent.type(screen.getByLabelText("Reply body"), "Hello");
+    await userEvent.click(screen.getByRole("button", { name: "Send reply" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Sending…" })).toBeDisabled()
+    );
+  });
+
+  it("disables the textarea while a reply is being submitted", async () => {
+    mockSuccess();
+    vi.mocked(axios.post).mockReturnValue(new Promise(() => {}));
+    renderDetail();
+    await waitFor(() => expect(screen.getByLabelText("Reply body")).toBeInTheDocument());
+
+    await userEvent.type(screen.getByLabelText("Reply body"), "Hello");
+    await userEvent.click(screen.getByRole("button", { name: "Send reply" }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Reply body")).toBeDisabled()
     );
   });
 });
