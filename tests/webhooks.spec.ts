@@ -222,7 +222,7 @@ test.describe("Webhook — ticket visibility in tickets list", () => {
     const listResponse = await request.get(`${SERVER_URL}/api/tickets`);
     expect(listResponse.ok()).toBeTruthy();
 
-    const tickets = await listResponse.json();
+    const { data: tickets } = await listResponse.json();
     expect(Array.isArray(tickets)).toBeTruthy();
 
     const match = tickets.find((t: { id: number }) => t.id === ticketId);

@@ -420,16 +420,29 @@ await waitFor(() => expect(screen.getByText("Alice")).toBeInTheDocument());
 
 ## Testing (Playwright)
 
-See [tests/CLAUDE.md](tests/CLAUDE.md) for full setup details.
+### When to write an E2E test vs a unit test
+
+**Unit tests** (Vitest + RTL) cover everything that can be tested without a real browser or server:
+- Component rendering (fields, headings, buttons, badges)
+- Client-side form validation errors
+- Loading / skeleton states
+- Error message display
+- Data rendering with mocked API responses
+- API calls and their arguments (mocked axios)
+
+**E2E tests** (Playwright) cover only what cannot be tested without a real browser + real server:
+- Real authentication flows (session creation, cookie storage, redirects)
+- Real navigation between pages
+- Real mutations that hit the DB: POST / PATCH / DELETE and their effect on the UI
+- Role-based routing enforced by the server (e.g. agent redirected from `/users`)
+- Server-side validation responses (e.g. 409 conflict surfaced in the UI)
+
+**Never duplicate in E2E what a unit test already covers.** If the same assertion can be made in a Vitest test (rendering, validation errors, skeleton rows, etc.), write it there — not in Playwright.
 
 To write E2E tests, use the **playwright-e2e-writer** agent:
 
 ```
 @agent-playwright-e2e-writer <describe what to test>
 ```
-
-Examples:
-- `@agent-playwright-e2e-writer Write tests for the login flow`
-- `@agent-playwright-e2e-writer Add tests for admin-only access to /users`
 
 The agent has access to `tests/CLAUDE.md` for context on the test setup, accounts, routes, and isolation rules. Always invoke it rather than writing Playwright tests by hand.
