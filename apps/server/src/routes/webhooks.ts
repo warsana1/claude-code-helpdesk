@@ -2,6 +2,30 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
 import { TicketSource, TicketCategory, Prisma } from "../generated/prisma";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+async function classifyTicket(id: number, subject: string, body: string) {
+  const { text } = await generateText({
+    model: openai("gpt-5-nano"),
+    system:
+      "You are a customer support classifier. Classify the ticket into exactly one category based on its subject and body.\n" +
+      "Categories:\n" +
+      "- general_question: general inquiries, account questions, billing, feature questions\n" +
+      "- technical_question: bug reports, technical issues, errors, integration problems\n" +
+      "- refund_request: refund requests, cancellations, chargebacks\n\n" +
+      "Reply with ONLY the category name, nothing else.",
+    prompt: `Subject: ${subject}\n\nBody: ${body}`,
+  });
+
+  const category = text.trim().toLowerCase();
+  if (!Object.values(TicketCategory).includes(category as TicketCategory)) return;
+
+  await prisma.ticket.update({
+    where: { id },
+    data: { category: category as TicketCategory },
+  });
+}
 
 const router = Router();
 
@@ -39,6 +63,11 @@ router.post("/inbound-email", async (req, res, next) => {
         source: TicketSource.email,
       },
     });
+
+    if (!category) {
+      classifyTicket(ticket.id, ticket.subject, ticket.body).catch(console.error);
+    }
+
     res.status(201).json(ticket);
   } catch (err) {
     if (
