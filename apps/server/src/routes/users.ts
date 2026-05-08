@@ -105,6 +105,7 @@ router.delete("/:id", requireAdmin, async (req, res, next) => {
     if (target.role === Role.admin) return res.status(403).json({ error: "Admin users cannot be deleted." });
 
     await prisma.session.deleteMany({ where: { userId: id } });
+    await prisma.ticket.updateMany({ where: { assigneeId: id }, data: { assigneeId: null } });
     await prisma.user.update({ where: { id }, data: { deletedAt: new Date() } });
     res.status(204).send();
   } catch (err) {
