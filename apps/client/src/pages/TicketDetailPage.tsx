@@ -226,9 +226,16 @@ export function TicketDetailPage() {
                               {new Date(reply.createdAt).toLocaleString()}
                             </span>
                           </div>
-                          <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                            {reply.body}
-                          </p>
+                          {reply.bodyHtml ? (
+                            <div
+                              className="text-gray-700 leading-relaxed prose prose-sm max-w-none"
+                              dangerouslySetInnerHTML={{ __html: reply.bodyHtml }}
+                            />
+                          ) : (
+                            <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                              {reply.body}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>

@@ -65,12 +65,14 @@ export type SenderType = (typeof SenderType)[keyof typeof SenderType];
 
 export const createReplySchema = z.object({
   body: z.string().trim().min(1, "Reply body cannot be empty."),
+  bodyHtml: z.string().optional(),
 });
 export type CreateReplyInput = z.infer<typeof createReplySchema>;
 
 export type ReplyItem = {
   id: number;
   body: string;
+  bodyHtml: string | null;
   senderType: SenderType;
   createdAt: string;
   user: { id: string; name: string } | null;

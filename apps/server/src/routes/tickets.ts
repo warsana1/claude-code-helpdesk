@@ -98,6 +98,7 @@ router.get("/:id/replies", async (req, res) => {
     select: {
       id: true,
       body: true,
+      bodyHtml: true,
       senderType: true,
       createdAt: true,
       user: { select: { id: true, name: true } },
@@ -124,12 +125,14 @@ router.post("/:id/replies", async (req, res, next) => {
       data: {
         ticketId,
         body: result.data.body,
+        bodyHtml: result.data.bodyHtml,
         senderType: SenderType.agent,
         userId,
       },
       select: {
         id: true,
         body: true,
+        bodyHtml: true,
         senderType: true,
         createdAt: true,
         user: { select: { id: true, name: true } },

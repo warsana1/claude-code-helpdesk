@@ -79,6 +79,7 @@ model Reply {
   ticketId   Int
   ticket     Ticket     @relation(fields: [ticketId], references: [id])
   body       String
+  bodyHtml   String?
   senderType SenderType
   userId     String?
   user       User?      @relation(fields: [userId], references: [id])
