@@ -8,6 +8,7 @@ import { usersRouter } from "./routes/users";
 import { webhooksRouter } from "./routes/webhooks";
 import { requireAuth } from "./middleware/auth";
 import { Prisma } from "./generated/prisma";
+import { startBoss } from "./jobs/boss";
 
 if (!process.env.BETTER_AUTH_SECRET) {
   console.error("FATAL: BETTER_AUTH_SECRET is not set");
@@ -48,6 +49,13 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
 };
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+startBoss()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("Failed to start pg-boss:", err);
+    process.exit(1);
+  });
