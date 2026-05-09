@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { NavBar } from "../components/NavBar";
+import { useTheme } from "../lib/theme";
 
 type StatsResponse = {
   totalTickets: number;
@@ -42,20 +43,25 @@ function formatDateLabel(dateStr: string): string {
   return parseDate(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function StatCard({
-  label,
-  value,
-  sub,
-}: {
+type StatCardProps = {
   label: string;
   value: React.ReactNode;
   sub?: string;
-}) {
+  accent: string;
+};
+
+function StatCard({ label, value, sub, accent }: StatCardProps) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <p className="text-sm font-medium text-gray-500">{label}</p>
-      <p className="mt-2 text-3xl font-bold text-gray-900">{value}</p>
-      {sub && <p className="mt-1 text-xs text-gray-400">{sub}</p>}
+    <div className="bg-card border border-border rounded-xl p-5 relative overflow-hidden">
+      <div
+        className="absolute left-0 top-0 bottom-0 w-0.5 rounded-l-xl"
+        style={{ background: accent }}
+      />
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">{label}</p>
+      <p className="text-3xl font-bold font-mono tracking-tight" style={{ color: accent }}>
+        {value}
+      </p>
+      {sub && <p className="mt-1 text-xs text-muted-foreground/60">{sub}</p>}
     </div>
   );
 }
@@ -76,38 +82,46 @@ function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
   });
   const count = payload[0].value ?? 0;
   return (
-    <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-sm text-sm">
-      <p className="font-medium text-gray-700">{full}</p>
-      <p className="text-gray-500">
+    <div className="bg-card border border-border rounded-lg px-3 py-2.5 shadow-xl text-sm">
+      <p className="font-medium text-foreground mb-0.5">{full}</p>
+      <p className="text-muted-foreground text-xs">
         {count} ticket{count !== 1 ? "s" : ""}
       </p>
     </div>
   );
 }
 
+const statAccents = ["#3b82f6", "#f59e0b", "#22c55e", "#a855f7", "#06b6d4"];
+
 export function DashboardPage() {
+  const { theme } = useTheme();
   const { data, isPending, isError } = useQuery({
     queryKey: ["stats"],
     queryFn: fetchStats,
   });
 
+  const chartGrid = theme === "dark" ? "#1c1c30" : "#ccd7e8";
+  const chartTick = theme === "dark" ? "#4a5a6e" : "#8899aa";
+  const chartBar = theme === "dark" ? "#3b82f6" : "#2563eb";
+  const chartCursor = theme === "dark" ? "rgba(59,130,246,0.05)" : "rgba(37,99,235,0.06)";
+
   if (isPending) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background">
         <NavBar />
         <main className="max-w-5xl mx-auto px-4 py-10">
-          <div className="h-8 w-32 bg-gray-200 rounded animate-pulse mb-8" />
+          <div className="h-7 w-32 bg-muted rounded animate-pulse mb-8" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-                <div className="mt-2 h-8 w-16 bg-gray-200 rounded animate-pulse" />
+              <div key={i} className="bg-card border border-border rounded-xl p-5">
+                <div className="h-3 w-24 bg-muted rounded animate-pulse mb-3" />
+                <div className="h-8 w-20 bg-muted rounded animate-pulse" />
               </div>
             ))}
           </div>
-          <div className="mt-6 bg-white rounded-xl border border-gray-200 p-6">
-            <div className="h-4 w-48 bg-gray-200 rounded animate-pulse mb-6" />
-            <div className="h-64 bg-gray-100 rounded animate-pulse" />
+          <div className="mt-6 bg-card border border-border rounded-xl p-6">
+            <div className="h-3 w-48 bg-muted rounded animate-pulse mb-6" />
+            <div className="h-64 bg-muted/50 rounded animate-pulse" />
           </div>
         </main>
       </div>
@@ -116,47 +130,51 @@ export function DashboardPage() {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background">
         <NavBar />
         <main className="max-w-5xl mx-auto px-4 py-10">
-          <p className="text-sm text-red-500">Failed to load dashboard stats.</p>
+          <p className="text-sm text-red-500 dark:text-red-400">Failed to load dashboard stats.</p>
         </main>
       </div>
     );
   }
 
+  const stats = [
+    { label: "Total Tickets", value: data.totalTickets },
+    { label: "Open Tickets", value: data.openTickets },
+    { label: "Resolved by AI", value: data.aiResolvedTickets },
+    {
+      label: "AI Resolution Rate",
+      value: data.aiResolvedPercent !== null ? `${data.aiResolvedPercent.toFixed(1)}%` : "—",
+      sub: "of all resolved tickets",
+    },
+    {
+      label: "Avg Resolution Time",
+      value: data.avgResolutionSeconds !== null ? formatDuration(data.avgResolutionSeconds) : "—",
+      sub: "resolved & closed tickets",
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <NavBar />
       <main className="max-w-5xl mx-auto px-4 py-10">
-        <h1 className="text-2xl font-bold text-gray-900 mb-8">Dashboard</h1>
+        <h1 className="text-2xl font-semibold text-foreground mb-8 tracking-tight">Dashboard</h1>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <StatCard label="Total Tickets" value={data.totalTickets} />
-          <StatCard label="Open Tickets" value={data.openTickets} />
-          <StatCard label="Resolved by AI" value={data.aiResolvedTickets} />
-          <StatCard
-            label="AI Resolution Rate"
-            value={
-              data.aiResolvedPercent !== null
-                ? `${data.aiResolvedPercent.toFixed(1)}%`
-                : "—"
-            }
-            sub="of all resolved tickets"
-          />
-          <StatCard
-            label="Avg Resolution Time"
-            value={
-              data.avgResolutionSeconds !== null
-                ? formatDuration(data.avgResolutionSeconds)
-                : "—"
-            }
-            sub="for resolved & closed tickets"
-          />
+          {stats.map((s, i) => (
+            <StatCard
+              key={s.label}
+              label={s.label}
+              value={s.value}
+              sub={s.sub}
+              accent={statAccents[i]}
+            />
+          ))}
         </div>
 
-        <div className="mt-6 bg-white rounded-xl border border-gray-200 p-6">
-          <p className="text-sm font-medium text-gray-500 mb-6">
+        <div className="mt-6 bg-card border border-border rounded-xl p-6">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-6">
             Tickets per Day — Last 30 Days
           </p>
           <ResponsiveContainer width="100%" height={260}>
@@ -164,32 +182,23 @@ export function DashboardPage() {
               data={data.ticketsPerDay}
               margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
             >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                vertical={false}
-                stroke="#f3f4f6"
-              />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartGrid} />
               <XAxis
                 dataKey="date"
                 tickFormatter={formatDateLabel}
-                tick={{ fontSize: 11, fill: "#9ca3af" }}
+                tick={{ fontSize: 11, fill: chartTick, fontFamily: "Outfit" }}
                 axisLine={false}
                 tickLine={false}
                 interval={4}
               />
               <YAxis
                 allowDecimals={false}
-                tick={{ fontSize: 11, fill: "#9ca3af" }}
+                tick={{ fontSize: 11, fill: chartTick, fontFamily: "Outfit" }}
                 axisLine={false}
                 tickLine={false}
               />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: "#f9fafb" }} />
-              <Bar
-                dataKey="count"
-                fill="#6366f1"
-                radius={[3, 3, 0, 0]}
-                maxBarSize={32}
-              />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: chartCursor }} />
+              <Bar dataKey="count" fill={chartBar} radius={[3, 3, 0, 0]} maxBarSize={28} />
             </BarChart>
           </ResponsiveContainer>
         </div>

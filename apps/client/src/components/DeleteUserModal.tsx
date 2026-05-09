@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { X, TriangleAlert } from "lucide-react";
 import axios from "axios";
 
 type Props = {
@@ -36,30 +37,49 @@ export function DeleteUserModal({ user, onClose, onSuccess }: Props) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-foreground/20 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md"
+        className="relative bg-card border border-border rounded-2xl shadow-2xl p-6 w-full max-w-sm"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">Delete User</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Are you sure you want to delete{" "}
-          <span className="font-medium text-gray-900">{user.name}</span>?
-          This action cannot be undone.
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-px h-px w-24 bg-gradient-to-r from-transparent via-red-500/40 to-transparent" />
+
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
+              <TriangleAlert size={15} className="text-red-500 dark:text-red-400" />
+            </div>
+            <h2 className="text-base font-semibold text-foreground">Delete User</h2>
+          </div>
+          <button
+            onClick={onClose}
+            disabled={isDeleting}
+            className="p-1.5 text-muted-foreground/60 hover:text-secondary-foreground hover:bg-foreground/5 rounded-md transition-all"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        <p className="text-sm text-muted-foreground mb-5">
+          Delete{" "}
+          <span className="font-medium text-foreground/80">{user.name}</span>?
+          {" "}This action cannot be undone.
         </p>
+
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">
+          <p className="text-xs text-red-500 dark:text-red-400 bg-red-500/8 border border-red-500/20 rounded-lg px-3.5 py-2.5 mb-4">
             {error}
           </p>
         )}
-        <div className="flex justify-end gap-3">
+
+        <div className="flex justify-end gap-2.5">
           <button
             type="button"
             onClick={onClose}
             disabled={isDeleting}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-60 rounded-lg transition-colors"
+            className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-secondary-foreground bg-muted hover:bg-accent border border-border rounded-lg transition-all disabled:opacity-50"
           >
             Cancel
           </button>
@@ -67,9 +87,9 @@ export function DeleteUserModal({ user, onClose, onSuccess }: Props) {
             type="button"
             onClick={handleDelete}
             disabled={isDeleting}
-            className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 rounded-lg transition-colors"
+            className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
           >
-            {isDeleting ? "Deleting..." : "Delete"}
+            {isDeleting ? "Deleting…" : "Delete"}
           </button>
         </div>
       </div>

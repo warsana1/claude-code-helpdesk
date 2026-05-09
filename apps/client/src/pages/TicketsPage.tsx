@@ -58,12 +58,45 @@ const categoryLabel: Record<TicketCategory, string> = {
   [TicketCategory.refund_request]: "Refund",
 };
 
-const statusStyles: Record<TicketStatus, string> = {
-  [TicketStatus.new]: "bg-blue-50 text-blue-500",
-  [TicketStatus.processing]: "bg-purple-50 text-purple-500",
-  [TicketStatus.open]: "bg-yellow-100 text-yellow-700",
-  [TicketStatus.resolved]: "bg-green-100 text-green-700",
-  [TicketStatus.closed]: "bg-gray-100 text-gray-600",
+const statusConfig: Record<
+  TicketStatus,
+  { dot: string; bg: string; text: string; border: string; label: string }
+> = {
+  [TicketStatus.new]: {
+    dot: "bg-blue-500",
+    bg: "bg-blue-500/10",
+    text: "text-blue-600 dark:text-blue-400",
+    border: "border-blue-500/25",
+    label: "New",
+  },
+  [TicketStatus.processing]: {
+    dot: "bg-purple-500",
+    bg: "bg-purple-500/10",
+    text: "text-purple-600 dark:text-purple-400",
+    border: "border-purple-500/25",
+    label: "Processing",
+  },
+  [TicketStatus.open]: {
+    dot: "bg-amber-500",
+    bg: "bg-amber-500/10",
+    text: "text-amber-600 dark:text-amber-400",
+    border: "border-amber-500/25",
+    label: "Open",
+  },
+  [TicketStatus.resolved]: {
+    dot: "bg-green-500",
+    bg: "bg-green-500/10",
+    text: "text-green-600 dark:text-green-400",
+    border: "border-green-500/25",
+    label: "Resolved",
+  },
+  [TicketStatus.closed]: {
+    dot: "bg-slate-400",
+    bg: "bg-slate-500/10",
+    text: "text-slate-600 dark:text-slate-400",
+    border: "border-slate-500/20",
+    label: "Closed",
+  },
 };
 
 const STATUS_TABS: { label: string; value: StatusFilter }[] = [
@@ -80,7 +113,7 @@ const columns: ColumnDef<Ticket, any>[] = [
     header: "#",
     enableSorting: true,
     cell: (info) => (
-      <span className="text-gray-400 font-mono text-xs">#{info.getValue()}</span>
+      <span className="text-muted-foreground/60 font-mono text-xs">#{info.getValue()}</span>
     ),
   }),
   columnHelper.accessor("subject", {
@@ -89,7 +122,7 @@ const columns: ColumnDef<Ticket, any>[] = [
     cell: (info) => (
       <Link
         to={`/tickets/${info.row.original.id}`}
-        className="text-gray-900 font-medium max-w-xs truncate block hover:text-blue-600 hover:underline"
+        className="text-foreground/80 font-medium max-w-xs truncate block hover:text-primary transition-colors"
       >
         {info.getValue()}
       </Link>
@@ -102,8 +135,8 @@ const columns: ColumnDef<Ticket, any>[] = [
       const ticket = info.row.original;
       return (
         <div>
-          <div>{ticket.fromName}</div>
-          <div className="text-xs text-gray-400">{ticket.fromEmail}</div>
+          <div className="text-secondary-foreground text-sm">{ticket.fromName}</div>
+          <div className="text-xs text-muted-foreground">{ticket.fromEmail}</div>
         </div>
       );
     },
@@ -112,7 +145,7 @@ const columns: ColumnDef<Ticket, any>[] = [
     header: "Category",
     enableSorting: true,
     cell: (info) => (
-      <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+      <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
         {categoryLabel[info.row.original.category]}
       </span>
     ),
@@ -120,18 +153,26 @@ const columns: ColumnDef<Ticket, any>[] = [
   columnHelper.accessor("status", {
     header: "Status",
     enableSorting: true,
-    cell: (info) => (
-      <span
-        className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusStyles[info.row.original.status]}`}
-      >
-        {info.row.original.status}
-      </span>
-    ),
+    cell: (info) => {
+      const cfg = statusConfig[info.row.original.status];
+      return (
+        <span
+          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.bg} ${cfg.text} ${cfg.border}`}
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+          {cfg.label}
+        </span>
+      );
+    },
   }),
   columnHelper.accessor("createdAt", {
     header: "Received",
     enableSorting: true,
-    cell: (info) => new Date(info.getValue()).toLocaleDateString(),
+    cell: (info) => (
+      <span className="text-muted-foreground text-xs">
+        {new Date(info.getValue()).toLocaleDateString()}
+      </span>
+    ),
   }),
 ];
 
@@ -150,7 +191,6 @@ export function TicketsPage() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  // Reset to page 1 whenever any filter/sort changes
   useEffect(() => {
     setPage(1);
   }, [sorting, categoryFilter, statusFilter, search]);
@@ -182,19 +222,19 @@ export function TicketsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <NavBar />
       <div className="max-w-6xl mx-auto px-4 py-10">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Tickets</h1>
+          <h1 className="text-2xl font-semibold text-foreground tracking-tight">Tickets</h1>
           <div className="relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
             <input
               type="text"
               placeholder="Search tickets…"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="pl-9 pr-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 w-64"
+              className="pl-9 pr-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/40 transition-all w-56"
             />
           </div>
         </div>
@@ -205,10 +245,10 @@ export function TicketsPage() {
             <button
               key={value}
               onClick={() => setStatusFilter(value)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3.5 py-1.5 rounded-md text-sm font-medium transition-all ${
                 statusFilter === value
-                  ? "bg-gray-900 text-white"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-primary/10 text-primary border border-primary/25"
+                  : "text-muted-foreground hover:text-secondary-foreground hover:bg-foreground/5 border border-transparent"
               }`}
             >
               {label}
@@ -221,7 +261,7 @@ export function TicketsPage() {
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value as CategoryFilter)}
-            className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300"
+            className="px-3 py-1.5 rounded-lg border border-border bg-card text-sm text-secondary-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/40 transition-all"
           >
             <option value="">All Categories</option>
             <option value={TicketCategory.general_question}>General</option>
@@ -236,16 +276,16 @@ export function TicketsPage() {
                 setSearchInput("");
                 setSearch("");
               }}
-              className="px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+              className="px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-colors"
             >
               Clear filters
             </button>
           )}
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="border-b border-border">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
@@ -254,8 +294,8 @@ export function TicketsPage() {
                     return (
                       <th
                         key={header.id}
-                        className={`text-left px-4 py-3 font-medium text-gray-700 ${
-                          canSort ? "cursor-pointer select-none" : ""
+                        className={`text-left px-4 py-3 text-xs font-medium text-muted-foreground/70 uppercase tracking-wider ${
+                          canSort ? "cursor-pointer select-none hover:text-muted-foreground transition-colors" : ""
                         }`}
                         onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
                       >
@@ -263,9 +303,9 @@ export function TicketsPage() {
                           {flexRender(header.column.columnDef.header, header.getContext())}
                           {canSort && (
                             <>
-                              {sorted === "asc" && <ChevronUp size={14} />}
-                              {sorted === "desc" && <ChevronDown size={14} />}
-                              {!sorted && <ChevronsUpDown size={14} className="text-gray-400" />}
+                              {sorted === "asc" && <ChevronUp size={13} className="text-primary" />}
+                              {sorted === "desc" && <ChevronDown size={13} className="text-primary" />}
+                              {!sorted && <ChevronsUpDown size={13} className="text-muted-foreground/30" />}
                             </>
                           )}
                         </div>
@@ -275,22 +315,22 @@ export function TicketsPage() {
                 </tr>
               ))}
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border/50">
               {isPending
                 ? Array.from({ length: PAGE_SIZE }).map((_, i) => (
                     <tr key={i}>
-                      <td className="px-4 py-3"><div className="h-4 w-8 bg-gray-200 rounded animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-4 w-48 bg-gray-200 rounded animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-4 w-36 bg-gray-200 rounded animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-4 w-24 bg-gray-200 rounded animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-4 w-8 bg-muted rounded animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-4 w-48 bg-muted rounded animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-4 w-36 bg-muted rounded animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-5 w-20 bg-muted rounded-full animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-5 w-20 bg-muted rounded-full animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-4 w-20 bg-muted rounded animate-pulse" /></td>
                     </tr>
                   ))
                 : table.getRowModel().rows.map((row) => (
-                    <tr key={row.id} className="hover:bg-gray-50">
+                    <tr key={row.id} className="hover:bg-primary/3 transition-colors">
                       {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="px-4 py-3 text-gray-600">
+                        <td key={cell.id} className="px-4 py-3">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
                       ))}
@@ -300,36 +340,34 @@ export function TicketsPage() {
           </table>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
-            <p className="text-sm text-gray-500">
-              {total === 0
-                ? "No results"
-                : `Showing ${rangeStart}–${rangeEnd} of ${total}`}
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border/50">
+            <p className="text-xs text-muted-foreground">
+              {total === 0 ? "No results" : `${rangeStart}–${rangeEnd} of ${total}`}
             </p>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage((p) => p - 1)}
                 disabled={page === 1}
-                className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={15} />
               </button>
-              <span className="text-sm text-gray-700">
-                Page {page} of {totalPages}
+              <span className="text-xs text-muted-foreground font-mono">
+                {page} / {totalPages}
               </span>
               <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page >= totalPages}
-                className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={15} />
               </button>
             </div>
           </div>
         </div>
 
         {!isPending && tickets.length === 0 && (
-          <p className="mt-6 text-center text-sm text-gray-400">
+          <p className="mt-8 text-center text-sm text-muted-foreground">
             {search
               ? `No tickets matching "${search}".`
               : statusFilter === "all"
@@ -338,7 +376,7 @@ export function TicketsPage() {
           </p>
         )}
         {isError && (
-          <p className="mt-4 text-sm text-red-500">Failed to load tickets.</p>
+          <p className="mt-4 text-sm text-red-500 dark:text-red-400">Failed to load tickets.</p>
         )}
       </div>
     </div>

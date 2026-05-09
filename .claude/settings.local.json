@@ -83,7 +83,8 @@
       "PowerShell(Get-NetTCPConnection *)",
       "Bash(bunx --bun prisma migrate resolve --applied 20260508233924_add_ticket_processing_states)",
       "Bash(bunx --bun prisma migrate dev --name set_default_status_new)",
-      "Bash(bunx --bun prisma migrate reset --force)"
+      "Bash(bunx --bun prisma migrate reset --force)",
+      "Bash(bunx --bun tsc --noEmit -p apps/client/tsconfig.json)"
     ]
   }
 }

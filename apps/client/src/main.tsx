@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./index.css";
 import App from "./App";
+import { ThemeProvider } from "./lib/theme";
 
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
@@ -18,10 +19,12 @@ const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ThemeProvider>
   </StrictMode>
 );

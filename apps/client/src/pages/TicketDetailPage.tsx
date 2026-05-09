@@ -85,7 +85,9 @@ async function patchTicket(
 }
 
 const selectClass =
-  "w-full px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-60";
+  "w-full px-3 py-2 rounded-lg border border-border bg-input text-sm text-secondary-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/40 transition-all disabled:opacity-50 appearance-none";
+
+const metaLabel = "text-xs font-medium text-muted-foreground/70 uppercase tracking-wider mb-1.5";
 
 export function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -169,114 +171,109 @@ export function TicketDetailPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <NavBar />
       <div className="max-w-5xl mx-auto px-4 py-10">
         <Link
           to="/tickets"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-6"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-secondary-foreground mb-6 transition-colors"
         >
-          <ArrowLeft size={15} />
+          <ArrowLeft size={14} />
           Back to tickets
         </Link>
 
         {isPending && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-            <div className="h-7 w-2/3 bg-gray-200 rounded animate-pulse" />
+          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+            <div className="h-6 w-2/3 bg-muted rounded animate-pulse" />
             <div className="flex gap-2">
-              <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse" />
-              <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse" />
+              <div className="h-5 w-20 bg-muted rounded-full animate-pulse" />
+              <div className="h-5 w-20 bg-muted rounded-full animate-pulse" />
             </div>
-            <div className="h-4 w-1/3 bg-gray-200 rounded animate-pulse" />
-            <div className="space-y-2 pt-4 border-t border-gray-100">
-              <div className="h-4 w-full bg-gray-200 rounded animate-pulse" />
-              <div className="h-4 w-full bg-gray-200 rounded animate-pulse" />
-              <div className="h-4 w-4/5 bg-gray-200 rounded animate-pulse" />
+            <div className="h-4 w-1/3 bg-muted rounded animate-pulse" />
+            <div className="space-y-2 pt-4 border-t border-border/50">
+              <div className="h-4 w-full bg-muted rounded animate-pulse" />
+              <div className="h-4 w-full bg-muted rounded animate-pulse" />
+              <div className="h-4 w-4/5 bg-muted rounded animate-pulse" />
             </div>
           </div>
         )}
 
         {isError && (
-          <p className="text-sm text-red-500">Failed to load ticket.</p>
+          <p className="text-sm text-red-500 dark:text-red-400">Failed to load ticket.</p>
         )}
 
         {ticket && (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="p-6 border-b border-gray-100">
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-border/50">
               <div className="flex items-start justify-between gap-4">
-                <h1 className="text-xl font-semibold text-gray-900">
+                <h1 className="text-lg font-semibold text-foreground leading-snug">
                   {ticket.subject}
                 </h1>
-                <span className="text-gray-400 font-mono text-sm shrink-0">
+                <span className="text-muted-foreground font-mono text-sm shrink-0 mt-0.5">
                   #{ticket.id}
                 </span>
               </div>
             </div>
 
-            <div className="grid grid-cols-[1fr_260px] divide-x divide-gray-100">
-              {/* Left column: info + message */}
+            <div className="grid grid-cols-[1fr_240px] divide-x divide-border/50">
+              {/* Left column */}
               <div className="p-6 space-y-6 text-sm">
-                <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-gray-400 text-xs uppercase tracking-wide mb-0.5">From</p>
-                    <p className="font-medium text-gray-800">{ticket.fromName}</p>
-                    <p className="text-gray-500">{ticket.fromEmail}</p>
+                    <p className={metaLabel}>From</p>
+                    <p className="font-medium text-foreground/80">{ticket.fromName}</p>
+                    <p className="text-muted-foreground text-xs">{ticket.fromEmail}</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-gray-400 text-xs uppercase tracking-wide mb-0.5">Created</p>
-                      <p className="text-gray-700">{new Date(ticket.createdAt).toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-400 text-xs uppercase tracking-wide mb-0.5">Last updated</p>
-                      <p className="text-gray-700">{new Date(ticket.updatedAt).toLocaleString()}</p>
-                    </div>
+                  <div>
+                    <p className={metaLabel}>Created</p>
+                    <p className="text-secondary-foreground text-xs">{new Date(ticket.createdAt).toLocaleString()}</p>
+                    <p className={`${metaLabel} mt-2`}>Updated</p>
+                    <p className="text-secondary-foreground text-xs">{new Date(ticket.updatedAt).toLocaleString()}</p>
                   </div>
                 </div>
 
-                <div>
-                  <p className="text-gray-400 text-xs uppercase tracking-wide mb-3">Message</p>
-                  <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                    {ticket.body || <span className="text-gray-400 italic">No message body.</span>}
+                <div className="border-t border-border/50 pt-5">
+                  <p className={metaLabel}>Message</p>
+                  <div className="text-sm text-secondary-foreground whitespace-pre-wrap leading-relaxed">
+                    {ticket.body || <span className="text-muted-foreground italic">No message body.</span>}
                   </div>
                   <div className="mt-3">
                     <button
                       onClick={() => runSummarize()}
                       disabled={isSummarizing}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-muted hover:bg-accent text-muted-foreground hover:text-secondary-foreground text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                     >
-                      <ScrollText size={13} />
+                      <ScrollText size={12} />
                       {isSummarizing ? "Summarizing…" : "Summarize"}
                     </button>
                   </div>
                   {summaryError && (
-                    <p className="text-xs text-red-500 mt-2">{summaryError}</p>
+                    <p className="text-xs text-red-500 dark:text-red-400 mt-2">{summaryError}</p>
                   )}
                   {summary && !isSummarizing && (
-                    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-                      <p className="text-xs font-medium text-amber-700 uppercase tracking-wide mb-1.5">Summary</p>
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{summary}</p>
+                    <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/8 px-4 py-3">
+                      <p className="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-2">Summary</p>
+                      <p className="text-sm text-secondary-foreground whitespace-pre-wrap leading-relaxed">{summary}</p>
                     </div>
                   )}
                 </div>
 
                 {replies.length > 0 && (
-                  <div>
-                    <p className="text-gray-400 text-xs uppercase tracking-wide mb-3">
-                      Replies ({replies.length})
-                    </p>
+                  <div className="border-t border-border/50 pt-5">
+                    <p className={metaLabel}>Replies ({replies.length})</p>
                     <div className="space-y-3">
                       {replies.map((reply) => (
                         <div
                           key={reply.id}
-                          className={`rounded-lg p-3 text-sm ${
+                          className={`rounded-lg p-3.5 text-sm border ${
                             reply.senderType === SenderType.agent
-                              ? "bg-blue-50 border border-blue-100"
-                              : "bg-gray-50 border border-gray-100"
+                              ? "bg-primary/5 border-primary/20"
+                              : "bg-muted border-border/50"
                           }`}
                         >
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <span className="font-medium text-gray-800">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="font-medium text-foreground/80 text-sm">
                               {reply.senderType === SenderType.agent
                                 ? (reply.user?.name ?? "Agent")
                                 : ticket.fromName}
@@ -284,23 +281,23 @@ export function TicketDetailPage() {
                             <span
                               className={`inline-flex px-1.5 py-0.5 rounded-full text-xs font-medium ${
                                 reply.senderType === SenderType.agent
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-gray-200 text-gray-600"
+                                  ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25"
+                                  : "bg-muted text-muted-foreground border border-border"
                               }`}
                             >
                               {reply.senderType}
                             </span>
-                            <span className="ml-auto text-gray-400 text-xs">
+                            <span className="ml-auto text-muted-foreground text-xs">
                               {new Date(reply.createdAt).toLocaleString()}
                             </span>
                           </div>
                           {reply.bodyHtml ? (
                             <div
-                              className="text-gray-700 leading-relaxed prose prose-sm max-w-none"
+                              className="text-secondary-foreground leading-relaxed prose prose-sm max-w-none dark:prose-invert"
                               dangerouslySetInnerHTML={{ __html: reply.bodyHtml }}
                             />
                           ) : (
-                            <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                            <p className="text-secondary-foreground whitespace-pre-wrap leading-relaxed">
                               {reply.body}
                             </p>
                           )}
@@ -310,8 +307,8 @@ export function TicketDetailPage() {
                   </div>
                 )}
 
-                <div>
-                  <p className="text-gray-400 text-xs uppercase tracking-wide mb-2">Reply</p>
+                <div className="border-t border-border/50 pt-5">
+                  <p className={metaLabel}>Reply</p>
                   <textarea
                     aria-label="Reply body"
                     value={replyBody}
@@ -319,21 +316,21 @@ export function TicketDetailPage() {
                     placeholder="Write a reply…"
                     rows={4}
                     disabled={isSubmittingReply}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none disabled:opacity-60"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-input text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/40 resize-none disabled:opacity-50 transition-all"
                   />
                   {polishError && (
-                    <p className="text-xs text-red-500 mt-1">{polishError}</p>
+                    <p className="text-xs text-red-500 dark:text-red-400 mt-1.5">{polishError}</p>
                   )}
-                  <div className="flex justify-end gap-2 mt-2">
+                  <div className="flex justify-end gap-2 mt-2.5">
                     <button
                       onClick={() => {
                         const trimmed = replyBody.trim();
                         if (trimmed) runPolish(trimmed);
                       }}
                       disabled={isPolishing || isSubmittingReply || replyBody.trim().length === 0}
-                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg border border-border bg-muted hover:bg-accent text-muted-foreground hover:text-secondary-foreground text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                     >
-                      <Sparkles size={14} />
+                      <Sparkles size={13} />
                       {isPolishing ? "Polishing…" : "Polish"}
                     </button>
                     <button
@@ -342,7 +339,7 @@ export function TicketDetailPage() {
                         if (trimmed) submitReply(trimmed);
                       }}
                       disabled={isSubmittingReply || isPolishing || replyBody.trim().length === 0}
-                      className="px-4 py-1.5 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="px-4 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       {isSubmittingReply ? "Sending…" : "Send reply"}
                     </button>
@@ -350,10 +347,10 @@ export function TicketDetailPage() {
                 </div>
               </div>
 
-              {/* Right column: dropdowns */}
-              <div className="p-6 space-y-4 text-sm">
+              {/* Right sidebar */}
+              <div className="p-6 space-y-5 text-sm">
                 <div>
-                  <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Assigned to</p>
+                  <p className={metaLabel}>Assigned to</p>
                   <select
                     aria-label="Assign to agent"
                     value={ticket.assignee?.id ?? ""}
@@ -371,7 +368,7 @@ export function TicketDetailPage() {
                 </div>
 
                 <div>
-                  <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Status</p>
+                  <p className={metaLabel}>Status</p>
                   <select
                     aria-label="Status"
                     value={ticket.status}
@@ -386,7 +383,7 @@ export function TicketDetailPage() {
                 </div>
 
                 <div>
-                  <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Category</p>
+                  <p className={metaLabel}>Category</p>
                   <select
                     aria-label="Category"
                     value={ticket.category}
