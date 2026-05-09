@@ -84,7 +84,13 @@
       "Bash(bunx --bun prisma migrate resolve --applied 20260508233924_add_ticket_processing_states)",
       "Bash(bunx --bun prisma migrate dev --name set_default_status_new)",
       "Bash(bunx --bun prisma migrate reset --force)",
-      "Bash(bunx --bun tsc --noEmit -p apps/client/tsconfig.json)"
+      "Bash(bunx --bun tsc --noEmit -p apps/client/tsconfig.json)",
+      "Bash(docker build *)",
+      "Bash(docker run *)",
+      "Bash(docker stop *)",
+      "Bash(docker rm *)",
+      "Bash(docker exec *)",
+      "Bash(kill %1)"
     ]
   }
 }

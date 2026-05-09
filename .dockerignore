@@ -1,0 +1,15 @@
+.git
+node_modules
+apps/client/node_modules
+apps/server/node_modules
+packages/core/node_modules
+apps/server/src/generated
+apps/client/dist
+apps/server/dist
+tests
+playwright-report
+test-results
+*.log
+.env
+.env.*
+!.env.example

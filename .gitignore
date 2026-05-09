@@ -23,6 +23,7 @@ node_modules/.prisma
 
 # Environment / Secret
 .env
+.env.docker
 .env.local
 .env.development.local
 .env.test

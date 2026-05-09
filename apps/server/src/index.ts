@@ -2,6 +2,7 @@ import "./instrument";
 import * as Sentry from "@sentry/node";
 import express, { type ErrorRequestHandler } from "express";
 import cors from "cors";
+import { join } from "node:path";
 import rateLimit from "express-rate-limit";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth";
@@ -49,6 +50,14 @@ app.use("/api/webhooks", webhooksRouter);
 app.use("/api/tickets", requireAuth, ticketsRouter);
 app.use("/api/users", requireAuth, usersRouter);
 app.use("/api/stats", requireAuth, statsRouter);
+
+if (process.env.NODE_ENV === "production") {
+  const clientDist = join(import.meta.dir, "../../client/dist");
+  app.use(express.static(clientDist));
+  app.get("/*path", (_req, res) => {
+    res.sendFile(join(clientDist, "index.html"));
+  });
+}
 
 Sentry.setupExpressErrorHandler(app);
 
