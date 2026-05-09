@@ -4,7 +4,7 @@ import {
   ticketSortSchema,
   createReplySchema,
 } from "@helpdesk/core";
-import { SenderType } from "../generated/prisma";
+import { SenderType, TicketStatus } from "../generated/prisma";
 import { prisma } from "../db";
 import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
@@ -31,8 +31,10 @@ router.get("/", async (req, res) => {
   } = result.data;
 
   const where = {
+    ...(status
+      ? { status }
+      : { status: { notIn: [TicketStatus["new"], TicketStatus.processing] } }),
     ...(category ? { category } : {}),
-    ...(status ? { status } : {}),
     ...(search
       ? {
           OR: [

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
 import { TicketSource, TicketCategory, Prisma } from "../generated/prisma";
-import { boss, CLASSIFY_TICKET_QUEUE } from "../jobs/boss";
+import { boss, AUTO_RESOLVE_TICKET_QUEUE } from "../jobs/boss";
 
 const router = Router();
 
@@ -41,13 +41,13 @@ router.post("/inbound-email", async (req, res, next) => {
       },
     });
 
-    if (!category) {
-      await boss.send(CLASSIFY_TICKET_QUEUE, {
-        ticketId: ticket.id,
-        subject: ticket.subject,
-        body: ticket.body,
-      });
-    }
+    await boss.send(AUTO_RESOLVE_TICKET_QUEUE, {
+      ticketId: ticket.id,
+      fromName: ticket.fromName,
+      subject: ticket.subject,
+      body: ticket.body,
+      hadCategory: !!category,
+    });
 
     res.status(201).json(ticket);
   } catch (err) {

@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 export const TicketStatus = {
+  new: "new",
+  processing: "processing",
   open: "open",
   resolved: "resolved",
   closed: "closed",

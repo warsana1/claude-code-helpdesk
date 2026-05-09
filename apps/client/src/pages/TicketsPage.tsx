@@ -59,6 +59,8 @@ const categoryLabel: Record<TicketCategory, string> = {
 };
 
 const statusStyles: Record<TicketStatus, string> = {
+  [TicketStatus.new]: "bg-blue-50 text-blue-500",
+  [TicketStatus.processing]: "bg-purple-50 text-purple-500",
   [TicketStatus.open]: "bg-yellow-100 text-yellow-700",
   [TicketStatus.resolved]: "bg-green-100 text-green-700",
   [TicketStatus.closed]: "bg-gray-100 text-gray-600",

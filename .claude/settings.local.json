@@ -80,7 +80,10 @@
       "Bash(bunx --bun tsc --noEmit --project apps/client/tsconfig.json)",
       "Bash(bunx --bun tsc --noEmit --project apps/server/tsconfig.json)",
       "mcp__ide__getDiagnostics",
-      "PowerShell(Get-NetTCPConnection *)"
+      "PowerShell(Get-NetTCPConnection *)",
+      "Bash(bunx --bun prisma migrate resolve --applied 20260508233924_add_ticket_processing_states)",
+      "Bash(bunx --bun prisma migrate dev --name set_default_status_new)",
+      "Bash(bunx --bun prisma migrate reset --force)"
     ]
   }
 }
