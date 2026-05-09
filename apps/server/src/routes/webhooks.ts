@@ -29,6 +29,8 @@ router.post("/inbound-email", async (req, res, next) => {
   const { from, fromName, subject, body, category, messageId } = result.data;
 
   try {
+    const aiAgent = await prisma.user.findUnique({ where: { email: "ai@helpdesk.local" } });
+
     const ticket = await prisma.ticket.create({
       data: {
         subject: subject.trim(),
@@ -38,6 +40,7 @@ router.post("/inbound-email", async (req, res, next) => {
         category: category ? TicketCategory[category as keyof typeof TicketCategory] : undefined,
         emailMessageId: messageId ?? null,
         source: TicketSource.email,
+        assigneeId: aiAgent?.id ?? null,
       },
     });
 

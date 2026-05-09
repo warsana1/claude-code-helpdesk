@@ -102,7 +102,7 @@ export async function startBoss() {
       console.error(`Auto-resolve failed for ticket ${ticketId}:`, err);
       await prisma.ticket.update({
         where: { id: ticketId },
-        data: { status: TicketStatus.open },
+        data: { status: TicketStatus.open, assigneeId: null },
       });
       if (!hadCategory) {
         await boss.send(CLASSIFY_TICKET_QUEUE, { ticketId, subject, body });
@@ -128,7 +128,7 @@ export async function startBoss() {
     } else {
       await prisma.ticket.update({
         where: { id: ticketId },
-        data: { status: TicketStatus.open },
+        data: { status: TicketStatus.open, assigneeId: null },
       });
       if (!hadCategory) {
         await boss.send(CLASSIFY_TICKET_QUEUE, { ticketId, subject, body });

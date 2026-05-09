@@ -6,6 +6,7 @@ import { auth } from "./auth";
 import { ticketsRouter } from "./routes/tickets";
 import { usersRouter } from "./routes/users";
 import { webhooksRouter } from "./routes/webhooks";
+import { statsRouter } from "./routes/stats";
 import { requireAuth } from "./middleware/auth";
 import { Prisma } from "./generated/prisma";
 import { startBoss } from "./jobs/boss";
@@ -40,6 +41,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/webhooks", webhooksRouter);
 app.use("/api/tickets", requireAuth, ticketsRouter);
 app.use("/api/users", requireAuth, usersRouter);
+app.use("/api/stats", requireAuth, statsRouter);
 
 const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002")
