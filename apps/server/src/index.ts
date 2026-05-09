@@ -1,3 +1,5 @@
+import "./instrument";
+import * as Sentry from "@sentry/node";
 import express, { type ErrorRequestHandler } from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
@@ -19,7 +21,12 @@ if (!process.env.BETTER_AUTH_SECRET) {
 const app = express();
 const PORT = process.env.PORT ?? 3001;
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173", credentials: true }));
+app.use(
+  cors({
+    origin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173",
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 if (process.env.NODE_ENV === "production") {
@@ -43,9 +50,16 @@ app.use("/api/tickets", requireAuth, ticketsRouter);
 app.use("/api/users", requireAuth, usersRouter);
 app.use("/api/stats", requireAuth, statsRouter);
 
+Sentry.setupExpressErrorHandler(app);
+
 const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
-  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002")
-    return res.status(409).json({ error: "A record with that value already exists." });
+  if (
+    err instanceof Prisma.PrismaClientKnownRequestError &&
+    err.code === "P2002"
+  )
+    return res
+      .status(409)
+      .json({ error: "A record with that value already exists." });
   console.error(err);
   res.status(500).json({ error: "Internal server error." });
 };
