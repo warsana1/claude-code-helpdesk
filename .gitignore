@@ -1,6 +1,5 @@
 # Dependency Manager
 node_modules/
-bun.lock
 # If npm/yarn are needed in the future
 jspm_packages/
 .pnp.*
