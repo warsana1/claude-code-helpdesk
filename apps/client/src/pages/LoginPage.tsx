@@ -64,7 +64,7 @@ export function LoginPage() {
                 type="email"
                 autoComplete="email"
                 {...register("email")}
-                placeholder="you@company.com"
+                placeholder=""
                 className={`w-full bg-input border rounded-lg px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 transition-all ${
                   errors.email
                     ? "border-red-500/40 focus:ring-red-500/20"
@@ -88,7 +88,7 @@ export function LoginPage() {
                 type="password"
                 autoComplete="current-password"
                 {...register("password")}
-                placeholder="••••••••"
+                placeholder=""
                 className={`w-full bg-input border rounded-lg px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 transition-all ${
                   errors.password
                     ? "border-red-500/40 focus:ring-red-500/20"

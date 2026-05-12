@@ -30,6 +30,7 @@
     "@types/bun": "latest",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
+    "@types/node": "^25.7.0",
     "prisma": "^6.0.0"
   }
 }
