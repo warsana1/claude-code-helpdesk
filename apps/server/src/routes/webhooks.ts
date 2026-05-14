@@ -1,5 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
+import Parse from "@sendgrid/inbound-mail-parser";
 import { prisma } from "../db";
 import { TicketSource, Prisma } from "../generated/prisma";
 import { boss, AUTO_RESOLVE_TICKET_QUEUE } from "../jobs/boss";
@@ -23,14 +24,19 @@ function extractMessageId(headers: string): string | null {
   return match ? match[1].trim() : null;
 }
 
-router.post("/inbound-email", upload.none(), async (req, res, next) => {
+router.post("/inbound-email", upload.any(), async (req, res, next) => {
   const secret = process.env.INBOUND_EMAIL_WEBHOOK_SECRET;
   if (!secret)
     return res.status(503).json({ error: "Inbound email not configured." });
   if (req.query.secret !== secret)
     return res.status(401).json({ error: "Unauthorized." });
 
-  const { from, subject, text, html, headers } = req.body as Record<string, string>;
+  const parser = new Parse(
+    { keys: ["from", "subject", "text", "html", "headers"] },
+    { body: req.body, files: (req.files as Express.Multer.File[]) ?? [] }
+  );
+
+  const { from, subject, text, html, headers } = parser.keyValues() as Record<string, string>;
 
   if (!from || !subject || (!text && !html))
     return res.status(400).json({ error: "Missing required email fields." });
