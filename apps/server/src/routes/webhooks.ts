@@ -1,44 +1,56 @@
 import { Router } from "express";
-import { z } from "zod";
+import multer from "multer";
 import { prisma } from "../db";
-import { TicketSource, TicketCategory, Prisma } from "../generated/prisma";
+import { TicketSource, Prisma } from "../generated/prisma";
 import { boss, AUTO_RESOLVE_TICKET_QUEUE } from "../jobs/boss";
 
 const router = Router();
+const upload = multer();
 
-const inboundEmailSchema = z.object({
-  from: z.string().email("Invalid sender email."),
-  fromName: z.string().min(1, "Sender name is required."),
-  subject: z.string().min(1, "Subject is required."),
-  body: z.string().min(1, "Body is required."),
-  category: z.enum(["general_question", "technical_question", "refund_request"]).optional(),
-  messageId: z.string().optional(),
-});
+// Parse "Name <email@example.com>" or bare "email@example.com"
+function parseFrom(raw: string): { email: string; name: string } {
+  const match = raw.match(/^(?:"?([^"<]*)"?\s*)?<?([^>\s@]+@[^>\s]+)>?\s*$/);
+  if (match) {
+    const name = match[1]?.trim() || match[2].trim();
+    return { email: match[2].trim(), name };
+  }
+  return { email: raw.trim(), name: raw.trim() };
+}
 
-router.post("/inbound-email", async (req, res, next) => {
+// Extract Message-ID header value from raw headers string
+function extractMessageId(headers: string): string | null {
+  const match = headers.match(/^Message-ID:\s*(.+)$/im);
+  return match ? match[1].trim() : null;
+}
+
+router.post("/inbound-email", upload.none(), async (req, res, next) => {
   const secret = process.env.INBOUND_EMAIL_WEBHOOK_SECRET;
   if (!secret)
     return res.status(503).json({ error: "Inbound email not configured." });
-  if (req.headers["x-webhook-secret"] !== secret)
+  if (req.query.secret !== secret)
     return res.status(401).json({ error: "Unauthorized." });
 
-  const result = inboundEmailSchema.safeParse(req.body);
-  if (!result.success)
-    return res.status(400).json({ error: result.error.issues[0].message });
+  const { from, subject, text, html, headers } = req.body as Record<string, string>;
 
-  const { from, fromName, subject, body, category, messageId } = result.data;
+  if (!from || !subject || (!text && !html))
+    return res.status(400).json({ error: "Missing required email fields." });
+
+  const { email, name } = parseFrom(from);
+  const body = (text || html).trim();
+  const messageId = headers ? extractMessageId(headers) : null;
 
   try {
-    const aiAgent = await prisma.user.findUnique({ where: { email: "ai@helpdesk.local" } });
+    const aiAgent = await prisma.user.findUnique({
+      where: { email: "ai@helpdesk.local" },
+    });
 
     const ticket = await prisma.ticket.create({
       data: {
         subject: subject.trim(),
-        body: body.trim(),
-        fromEmail: from,
-        fromName: fromName.trim(),
-        category: category ? TicketCategory[category as keyof typeof TicketCategory] : undefined,
-        emailMessageId: messageId ?? null,
+        body,
+        fromEmail: email,
+        fromName: name,
+        emailMessageId: messageId,
         source: TicketSource.email,
         assigneeId: aiAgent?.id ?? null,
       },
@@ -49,7 +61,7 @@ router.post("/inbound-email", async (req, res, next) => {
       fromName: ticket.fromName,
       subject: ticket.subject,
       body: ticket.body,
-      hadCategory: !!category,
+      hadCategory: false,
     });
 
     res.status(201).json(ticket);
