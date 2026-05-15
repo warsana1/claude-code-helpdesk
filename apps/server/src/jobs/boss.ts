@@ -7,6 +7,7 @@ import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import { prisma } from "../db";
 import { TicketCategory, TicketStatus, SenderType } from "../generated/prisma";
+import { sendReplyEmail } from "../lib/email";
 
 export const CLASSIFY_TICKET_QUEUE = "classify-ticket";
 export const AUTO_RESOLVE_TICKET_QUEUE = "auto-resolve-ticket";
@@ -65,9 +66,10 @@ export async function startBoss() {
   await boss.work<AutoResolveTicketData>(AUTO_RESOLVE_TICKET_QUEUE, async ([job]) => {
     const { ticketId, fromName, subject, body, hadCategory } = job.data;
 
-    await prisma.ticket.update({
+    const ticket = await prisma.ticket.update({
       where: { id: ticketId },
       data: { status: TicketStatus.processing },
+      select: { fromEmail: true, fromName: true, emailMessageId: true },
     });
 
     let object: { canResolve: boolean; response: string | null };
@@ -91,7 +93,7 @@ export async function startBoss() {
           "- Acknowledge the customer's concern briefly and empathetically before answering\n" +
           "- Use short paragraphs; use a numbered list only for sequential steps, a bullet list for non-sequential items\n" +
           "- Be concise — answer the question fully but avoid unnecessary padding\n" +
-          "- Close with an offer to help further, then 'Best regards,\\nCode with Mosh Support'\n" +
+          `- Close with an offer to help further, then 'Best regards,\\n${process.env.SUPPORT_NAME ?? "Support"}'\n` +
           "- Do not invent information not in the knowledge base\n\n" +
           "Otherwise set canResolve to false and response to null.\n\n" +
           "Knowledge Base:\n" +
@@ -125,6 +127,16 @@ export async function startBoss() {
           data: { status: TicketStatus.resolved },
         }),
       ]);
+
+      if (ticket.fromEmail) {
+        sendReplyEmail({
+          to: ticket.fromEmail,
+          toName: ticket.fromName,
+          subject: `Re: ${subject}`,
+          text: object.response,
+          inReplyTo: ticket.emailMessageId,
+        }).catch(console.error);
+      }
     } else {
       await prisma.ticket.update({
         where: { id: ticketId },

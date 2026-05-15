@@ -8,6 +8,7 @@ import { SenderType, TicketStatus } from "../generated/prisma";
 import { prisma } from "../db";
 import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
+import { sendReplyEmail } from "../lib/email";
 
 const router = Router();
 
@@ -148,6 +149,18 @@ router.post("/:id/replies", async (req, res, next) => {
         user: { select: { id: true, name: true } },
       },
     });
+
+    if (ticket.fromEmail) {
+      sendReplyEmail({
+        to: ticket.fromEmail,
+        toName: ticket.fromName,
+        subject: `Re: ${ticket.subject}`,
+        text: result.data.body,
+        html: result.data.bodyHtml,
+        inReplyTo: ticket.emailMessageId,
+      }).catch(console.error);
+    }
+
     res.status(201).json(reply);
   } catch (err) {
     next(err);
